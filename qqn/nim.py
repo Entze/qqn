@@ -1,6 +1,7 @@
 from typing import Callable, Any, Dict, Collection, Optional, List, Tuple
+from copy import copy
 
-import eff
+from effect import sync_perform, sync_performer, Effect, TypeDispatcher, Constant, ComposedDispatcher, base_dispatcher
 
 
 class Player:
@@ -22,41 +23,64 @@ class State:
     def __init__(self, number_of_sticks: int):
         self.number_of_sticks: int = number_of_sticks
 
+    def __copy__(self):
+        return State(self.number_of_sticks)
+
 
 seven_sticks: State = State(7)
 
 
-class Move(eff.ects):
-    ret: Callable
-    move: Callable[[Player, State, Callable], Any]  # int should be a transition function (Callable[[State], State]
+class Move(object):
+    def __init__(self, player: Player, state: State):
+        self.player: Player = player
+        self.state: State = state
+
+
+class ChangeState(object):
+    def __init__(self, state: State, move):
+        self.state: State = state
+        self.move = move
+
+
+class LogError(object):
+    def __init__(self, message: str):
+        self.message: str = message
 
 
 class Game:
     def __init__(self, player1: Player, player2: Player, initial_state: State):
         self.player1: Player = player1
         self.player2: Player = player2
-        self.state: State = initial_state
+        self.state: State = copy(initial_state)
 
     def play(self):
         return self.player1turn()
 
     def player1turn(self):
         if self.state.number_of_sticks <= 0:
-            return Move.ret(self.player2)
-        self.state.number_of_sticks -= Move.move(self.player1, self.state)
+            return Effect(Constant(self.player2))
+        Effect(Move(self.player1, self.state)).on(
+            success=lambda m: Effect(ChangeState(self.state, m)),
+            error=lambda e: Effect(LogError(f"Error: {e}"))
+        )
         return self.player2turn()
 
     def player2turn(self):
         if self.state.number_of_sticks <= 0:
-            return Move.ret(self.player1)
-        self.state.number_of_sticks -= Move.move(self.player2, self.state)
+            return Effect(Constant(self.player1))
+        Effect(Move(self.player2, self.state)).on(
+            success=lambda m: Effect(ChangeState(self.state, m)),
+            error=lambda e: Effect(LogError(f"Error: {e}"))
+        )
         return self.player1turn()
 
 
+@sync_performer
 def perfect(player: Player, state: State) -> int:
     return max(1, state.number_of_sticks % 4)
 
 
+@sync_performer
 def stupid(player: Player, state: State) -> int:
     if player.name == 'Alice':
         return 1
@@ -64,6 +88,14 @@ def stupid(player: Player, state: State) -> int:
         if state.number_of_sticks <= 3:
             return state.number_of_sticks
         return 1
+
+
+@sync_performer
+def play_game(state: State, move):
+    if isinstance(move, int):
+        state.number_of_sticks -= move
+        return state
+    return None
 
 
 game: Game = Game(alice, bob, initial_state=seven_sticks)
@@ -104,7 +136,15 @@ def makegametree(player, state, cont):
 
 
 def main():
-    with Move(move=perfect, ret=identity):
-        print(game.play())
-    with Move(move=makegametree, ret=winner):
-        print(game.play())
+    perfect_game = Game(alice, bob, seven_sticks)
+    perfect_game_rev = Game(bob, alice, seven_sticks)
+
+    stupid_game = Game(alice, bob, seven_sticks)
+
+    dispatcher_perfect = ComposedDispatcher([
+        TypeDispatcher({Move: perfect,
+                        LogError: print,
+                        ChangeState: play_game}),
+        base_dispatcher
+    ])
+    print(sync_perform(dispatcher_perfect, perfect_game.play()))
