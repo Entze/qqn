@@ -1,6 +1,6 @@
 import random
 from itertools import repeat
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 from effect import sync_perform, sync_performer, Effect, TypeDispatcher, Constant, ComposedDispatcher, base_dispatcher, \
     Error
@@ -50,21 +50,6 @@ def play_game(dispatcher, continue_game: ContinueGame):
         elif continue_game.player == "Bob":
             return alice_turn(continue_game.sticks - continue_game.move)
         return Effect(Error(Exception(f"Player is not Alice or Bob, but {continue_game.player}")))
-    elif isinstance(continue_game.move, GameTree):
-        return continue_game.move
-    elif isinstance(continue_game.move, list):
-        continuation_effects = []
-        for m in continue_game.move:
-            if continue_game.player == "Alice":
-                continuation_effects.append(bob_turn(continue_game.sticks - m))
-            elif continue_game.player == "Bob":
-                continuation_effects.append(alice_turn(continue_game.sticks - m))
-            else:
-                return Effect(Error(Exception(f"Player is not Alice or Bob, but {continue_game.player}")))
-        continuations = []
-        for eff in continuation_effects:
-            continuations.append(sync_perform(dispatcher, eff))
-        return continuations
 
     return Effect(Error(Exception(f"Move is not an int: {continue_game.move}")))
 
@@ -85,6 +70,19 @@ def build_gametree(dispatcher, move: Move):
         subgames.append(sync_perform(dispatcher, eff))
     subtrees = list(zip([1, 2, 3], subgames))
     return GameTree(move.player, subtrees)
+
+
+@sync_performer
+def stack_gametrees(dispatcher, continue_game: ContinueGame):
+    if isinstance(continue_game.move, int):
+        if continue_game.player == "Alice":
+            return bob_turn(continue_game.sticks - continue_game.move)
+        elif continue_game.player == "Bob":
+            return alice_turn(continue_game.sticks - continue_game.move)
+        return Effect(Error(Exception(f"Player is not Alice or Bob, but {continue_game.player}")))
+    elif isinstance(continue_game.move, GameTree):
+        return continue_game.move
+    return Effect(Error(Exception(f"Move is neither int nor GameTree (Winner): {continue_game.move}")))
 
 
 @sync_performer
@@ -168,7 +166,27 @@ def bob_chooses(dispatcher, move: Move):
             else:
                 moves.append(max(1, move.sticks % 4))
         return moves
-    return max(1, move.sticks % 4)
+    return [max(1, move.sticks % 4)]
+
+
+@sync_performer
+def list_play_game(dispatcher, continue_game: ContinueGame):
+    if isinstance(continue_game.move, list):
+        continuation_effects = []
+        for m in continue_game.move:
+            if continue_game.player == "Alice":
+                continuation_effects.append(bob_turn(continue_game.sticks - m))
+            elif continue_game.player == "Bob":
+                continuation_effects.append(alice_turn(continue_game.sticks - m))
+            else:
+                return Effect(Error(Exception(f"Player is not Alice or Bob, but {continue_game.player}")))
+        continuations = []
+        for eff in continuation_effects:
+            continuations.append(sync_perform(dispatcher, eff))
+        if len(continuations) == 1:
+            continuations = continuations[0]
+        return continuations
+    return Effect(Error(Exception(f"Move is not a list or int, but a {type(continue_game.move)}")))
 
 
 @sync_performer
@@ -183,6 +201,47 @@ def coin(dispatcher, choose: Choose):
 
 # ======================================================================================================================
 
+class Get(object):
+    pass
+
+
+class Put(object):
+    def __init__(self, state):
+        self.state = state
+
+
+@sync_performer
+def put_state(dispatcher, put: Put):
+    if isinstance(dispatcher, ComposedDispatcher):
+        other_dispatchers = dispatcher.dispatchers[1:]
+        new_dispatcher: ComposedDispatcher = ComposedDispatcher([
+            TypeDispatcher({
+                Get: lambda: put.state
+            }),
+            other_dispatchers,
+        ])
+    elif isinstance(dispatcher, TypeDispatcher):
+        new_dispatcher: ComposedDispatcher = ComposedDispatcher([
+            TypeDispatcher({
+                Get: lambda: put.state
+            }),
+            dispatcher
+        ])
+    else:
+        raise Exception()
+    return new_dispatcher
+
+
+@sync_performer
+def score_updater(dispatcher, ret: Constant):
+    s: Dict[str, int] = sync_perform(dispatcher, Effect(Get()))
+    s[ret.result] += 1
+    new_dispatcher = sync_perform(dispatcher, Effect(Put(s)))
+    return ret.result
+
+
+# ======================================================================================================================
+
 def main():
     dispatcher_perfect: ComposedDispatcher = ComposedDispatcher([
         TypeDispatcher({Move: perfect,
@@ -191,7 +250,7 @@ def main():
 
     dispatcher_gametree: ComposedDispatcher = ComposedDispatcher([
         TypeDispatcher({Move: build_gametree,
-                        ContinueGame: play_game,
+                        ContinueGame: stack_gametrees,
                         Constant: end_gametree
                         }),
         base_dispatcher])
@@ -221,9 +280,15 @@ def main():
     dispatcher_all_results: ComposedDispatcher = ComposedDispatcher([
         TypeDispatcher({Choose: all_results}),
         TypeDispatcher({Move: bob_chooses,
-                        ContinueGame: play_game}),
+                        ContinueGame: list_play_game}),
         base_dispatcher
     ])
+
+    dispatcher_random_result: ComposedDispatcher = ComposedDispatcher([
+        TypeDispatcher({Choose: coin}),
+        TypeDispatcher({Move: bob_chooses,
+                        ContinueGame: list_play_game}),
+        base_dispatcher])
 
     print("\n===\nNormal game:")
     sync_perform(dispatcher_perfect, game(7).on(success=lambda res: print(res)))
@@ -240,8 +305,20 @@ def main():
     # print("\n===\nCheating game with checking for cheating:")
     # sync_perform(dispatcher_caught_cheating, game(7).on(success=lambda res: print(res)))
 
-    print("\n===\nAll results:")
+    print("\n===\nAll results (7):")
     sync_perform(dispatcher_all_results, game(7).on(success=lambda res: print(res)))
+
+    print("\n===\nAll results (3):")
+    sync_perform(dispatcher_all_results, game(3).on(success=lambda res: print(res)))
+
+    print("\n===\nAll results (4):")
+    sync_perform(dispatcher_all_results, game(4).on(success=lambda res: print(res)))
+
+    print("\n===\nRandom result (7):")
+    sync_perform(dispatcher_random_result, game(7).on(success=lambda res: print(res)))
+
+    print("\n===\nScoreboard (7):")
+    sync_perform(dispatcher_random_result, game(7).on(success=lambda res: print(res)))
 
 
 if __name__ == "__main__":
