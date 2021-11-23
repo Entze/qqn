@@ -53,14 +53,17 @@ def play_game(dispatcher, continue_game: ContinueGame):
     elif isinstance(continue_game.move, GameTree):
         return continue_game.move
     elif isinstance(continue_game.move, list):
-        continuations = []
+        continuation_effects = []
         for m in continue_game.move:
             if continue_game.player == "Alice":
-                continuations.append(bob_turn(continue_game.sticks - m))
+                continuation_effects.append(bob_turn(continue_game.sticks - m))
             elif continue_game.player == "Bob":
-                continuations.append(alice_turn(continue_game.sticks - m))
+                continuation_effects.append(alice_turn(continue_game.sticks - m))
             else:
                 return Effect(Error(Exception(f"Player is not Alice or Bob, but {continue_game.player}")))
+        continuations = []
+        for eff in continuation_effects:
+            continuations.append(sync_perform(dispatcher, eff))
         return continuations
 
     return Effect(Error(Exception(f"Move is not an int: {continue_game.move}")))
