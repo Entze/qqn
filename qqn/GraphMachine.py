@@ -12,14 +12,24 @@ orientation = {
 }
 
 
-def proceed(current_state, orientation_map, energy=0, trace=[],
+def proceed(current_state, orientation_map, energy=0, trace=None,
             prioritise_state=lambda l1: l1[0],
             prioritise_transition=lambda l2: l2[0]):
+    if trace is None:
+        trace = []
     if energy == 0:
         return trace + [current_state]
+    applicable_transition_funcs = [ori["update_func"] for ori in orientation_map.values() if
+                                   ori["state_check"](current_state)]
+    if not applicable_transition_funcs:
+        return trace + [current_state]
     update_func = prioritise_state(
-        [ori["update_func"] for ori in orientation_map.values() if ori["state_check"](current_state)])
-    new_state = prioritise_transition(update_func(current_state))
+        applicable_transition_funcs
+    )
+    new_states = update_func(current_state)
+    assert new_states
+    new_state = prioritise_transition(new_states)
+
     return proceed(new_state, orientation_map, energy - 1, trace + [current_state], prioritise_state,
                    prioritise_transition)
 
@@ -64,7 +74,17 @@ view_to_move = [{"name": "click_cell",
                  "relevant": has_happened_in_state,
                  "update": lambda s, e: setdictkey(s, "hit_node", e["hit_node"]),
                  "hit_node": None}]
-move_to_view = [{"name": "release"}]
+move_to_view = [{
+    "name": "release",
+    "relevant": has_happened_in_state,
+    "update": lambda s, _: s
+}]
+
+drag = [{
+    "name": "drag",
+    "relevant": has_happened_in_state,
+    "update": lambda s, e: setdictkey(setdictkey(s, "position_x", e["pointer_x"]), "position_y", e["pointer_y"])
+}]
 
 
 def all_conditions_met(s, conditions):
@@ -76,6 +96,7 @@ def apply_all_updates(s, conditions, init):
                             [lambda s2: obs["update"](s2, obs) for obs in s["observation"] if
                              all_conditions_met(s, conditions)], init)
 
+
 anim_orientation = {
     "rule1":
         {"state_check":
@@ -83,7 +104,28 @@ anim_orientation = {
              s["id"] == 1 and all_conditions_met(s, view_to_move),
          "update_func":
              lambda s:
-             [apply_all_updates(s, view_to_move, {"id": 2})]}
+             [apply_all_updates(s, view_to_move, {"id": 2, "observation": []})]},
+    "rule2":
+        {"state_check":
+             lambda s:
+             s["id"] == 2 and all_conditions_met(s, move_to_view),
+         "update_func":
+             lambda s:
+             [{"id": 1, "observation": []}]
+         },
+    "rule3":
+        {"state_check":
+             lambda s:
+             s["id"] == 2 and all_conditions_met(s, drag),
+         "update_func":
+             lambda s: [apply_all_updates(s, drag, {"id": 2, "hit_node": s["hit_node"], "observation": []})]
+         },
+    # "idem":
+    #    {"state_check":
+    #         lambda _: True,
+    #     "update_func":
+    #         lambda s: [setdictkey(s, "observation", [])]
+    #     }
 }
 
 state1 = {
