@@ -51,22 +51,39 @@ all_states = {
     "debounce_state": {"id": 6}
 }
 
+
+def has_happened_in_state(s, e):
+    return e["name"] in [obs["name"] for obs in s["observation"]]
+
+
+def has_happened_in_state_qualified_by(q, s, e):
+    return e[q] in [obs[q] for obs in s["observation"]]
+
+
 view_to_move = [{"name": "click_cell",
-                 "relevant": lambda s, e: e["name"] in [obs["name"] for obs in s["observation"]],
+                 "relevant": has_happened_in_state,
                  "update": lambda s, e: setdictkey(s, "hit_node", e["hit_node"]),
                  "hit_node": None}]
 move_to_view = [{"name": "release"}]
+
+
+def all_conditions_met(s, conditions):
+    return all(condition["relevant"](s, condition) for condition in conditions)
+
+
+def apply_all_updates(s, conditions, init):
+    return functools.reduce(lambda s1, func: func(s1),
+                            [lambda s2: obs["update"](s2, obs) for obs in s["observation"] if
+                             all_conditions_met(s, conditions)], init)
 
 anim_orientation = {
     "rule1":
         {"state_check":
              lambda s:
-             s["id"] == 1 and all(condition["relevant"](s, condition) for condition in view_to_move),
+             s["id"] == 1 and all_conditions_met(s, view_to_move),
          "update_func":
              lambda s:
-             [functools.reduce(lambda s1, func: func(s1),
-                               [lambda s2: obs["update"](s2, obs) for obs in s["observation"] if
-                                all(condition["relevant"](s, condition) for condition in view_to_move)], {"id": 2})]}
+             [apply_all_updates(s, view_to_move, {"id": 2})]}
 }
 
 state1 = {
