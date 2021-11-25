@@ -1,18 +1,7 @@
 import functools
 
-state = {"id": 1}
 
-orientation = {
-    "rule1":
-        {"state_check": lambda s: s["id"] == 1,
-         "update_func": lambda s: [{"id": 2}]},
-    "rule2":
-        {"state_check": lambda s: s["id"] == 2,
-         "update_func": lambda s: [{"id": 1}]}
-}
-
-
-def proceed(current_state, orientation_map, energy=0, trace=None,
+def proceed(current_state, orientation_map, energy=None, trace=None,
             prioritise_state=lambda l1: l1[0],
             prioritise_transition=lambda l2: l2[0]):
     if trace is None:
@@ -29,8 +18,9 @@ def proceed(current_state, orientation_map, energy=0, trace=None,
     new_states = update_func(current_state)
     assert new_states
     new_state = prioritise_transition(new_states)
+    new_energy = None if energy is None else energy - 1
 
-    return proceed(new_state, orientation_map, energy - 1, trace + [current_state], prioritise_state,
+    return proceed(new_state, orientation_map, new_energy, trace + [current_state], prioritise_state,
                    prioritise_transition)
 
 
@@ -86,6 +76,27 @@ drag = [{
     "update": lambda s, e: setdictkey(setdictkey(s, "position_x", e["pointer_x"]), "position_y", e["pointer_y"])
 }]
 
+view_to_insert_node = [{
+    "name": "pressed key",
+    "pressed_key": "i",
+    "relevant": lambda s, e: has_happened_in_state(s, e) and has_happened_in_state_qualified_by(
+        "pressed_key", s, e),
+}]
+
+insert_node = [{
+    "name": "click",
+    "pointer_x": None,
+    "pointer_y": None,
+    "relevant": has_happened_in_state,
+    "update": lambda s, e: setdictkey(setdictkey(s, "pointer_x", e["pointer_x"]), "pointer_y", e["pointer_y"])
+}]
+
+insert_node_to_view = [{
+    "name": "pressed key",
+    "pressed_key": "i",
+    "relevant": lambda s, e: has_happened_in_state(s, e) and has_happened_in_state_qualified_by("pressed_key", s, e)
+}]
+
 
 def all_conditions_met(s, conditions):
     return all(condition["relevant"](s, condition) for condition in conditions)
@@ -120,6 +131,27 @@ anim_orientation = {
          "update_func":
              lambda s: [apply_all_updates(s, drag, {"id": 2, "hit_node": s["hit_node"], "observation": []})]
          },
+    "rule4":
+        {"state_check":
+             lambda s:
+             s["id"] == 1 and all_conditions_met(s, view_to_insert_node),
+         "update_func":
+             lambda s: [{"id": 3, "observation": []}]
+         },
+    "rule5":
+        {"state_check":
+             lambda s:
+             s["id"] == 3 and all_conditions_met(s, insert_node),
+         "update_func":
+             lambda s: [apply_all_updates(s, insert_node, {"id": 3, "observation": []})]
+         },
+    "rule6":
+        {"state_check":
+             lambda s:
+             s["id"] == 3 and all_conditions_met(s, insert_node_to_view),
+         "update_func":
+             lambda s: [{"id": 1, "observation": []}]
+         }
     # "idem":
     #    {"state_check":
     #         lambda _: True,
