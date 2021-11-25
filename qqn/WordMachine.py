@@ -47,7 +47,7 @@ interpreter = {
     "extract":
         {"for": lambda s, store, content: prepare_content(s, store, content)},
     # s["knowledge"].update(s[store][content])},
-    "clear":
+    "reset":
         {"with": lambda s, key, value: set_key_val(s, key, [])}
 }
 
@@ -60,7 +60,7 @@ view_to_move_literate = {
         # ("remember", "trace", "with", "state"),
         ("update", "motive", "is", "move"),
         ("extract", "observation", "for", "details"),
-        ("clear", "observation", "with", "nothing")
+        ("reset", "observation", "with", "nothing")
     ]
 }
 
@@ -73,7 +73,7 @@ move_to_view_literate = {
         # ("remember", "trace", "with", "state"),
         ("update", "motive", "is", "view"),
         ("extract", "observation", "for", "details"),
-        ("clear", "observation", "with", "nothing")
+        ("reset", "observation", "with", "nothing")
     ]
 }
 
@@ -86,7 +86,7 @@ view_to_insert_literate = {
         # ("remember", "trace", "with", "state"),
         ("update", "motive", "is", "insert"),
         ("extract", "observation", "for", "details"),
-        ("clear", "observation", "with", "nothing")
+        ("reset", "observation", "with", "nothing")
     ]
 }
 
@@ -146,7 +146,7 @@ def main():
     # ("update", "motive", "is", "move"),
     # ("remember", "trace", "with", "state")
     #print(state)
-    interpreter["clear"]["with"](state, "observation", [])
+    interpreter["reset"]["with"](state, "observation", [])
     #print(state)
 
     #interpret(("extract", "observation", "for", "details"))(state)
@@ -154,7 +154,7 @@ def main():
     #interpret(("clear", "observation", "with", "nothing"))(state)
     #functools.reduce(lambda s1, func: func(s1),
                      #[   interpret(("extract", "observation", "for", "details")),
-                     #    interpret(("clear", "observation", "with", "nothing")),
+                     #    interpret(("reset", "observation", "with", "nothing")),
                      #],
                      #state)
     #prepare_content(state, "observation", "details")
