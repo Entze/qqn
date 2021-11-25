@@ -247,7 +247,7 @@ translate_node_left_by = {
         lambda s: "name" in s["observation"],
         lambda s: s["observation"]["name"] == "Key",
         lambda s: "symb" in s["observation"],
-        lambda s: s["observation"]["symb"] == 'i',
+        lambda s: s["observation"]["symb"] == 'a',
     ],
     "state_update": [lambda s: {
         "intent": s["intent"],
