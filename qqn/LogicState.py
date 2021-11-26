@@ -43,7 +43,7 @@ def step_query(queried):
     new_obj = func_bib[pre_proc_func[queried["rule"]["pre_proc"]]](queried["obj"])
 
     # actual_check performed
-    if not take_pred([queried["rule"]["actual_check"]])(queried["obj"]):
+    if not take_pred([queried["rule"]["actual_check"]])(new_obj):
         return queried.update({"status": "failed now"})
 
     # no further rule to be checked
@@ -63,6 +63,21 @@ def step_query(queried):
     next_obj = func_bib[next_rule["post_proc"]](new_obj)
     return queried.update({"rule": next_rule,
                            "obj": next_obj})
+
+
+rule_step = {
+    "state_check": lambda q: take_pred(q["rule"]["actual_check"])(func_bib[pre_proc_func[q["rule"]["pre_proc"]]](q["obj"])),
+    "update_func": lambda q:
+        q.update({"rule": q["rule"]["or_continued"].pop().update({"or_continue": q["rule"]["or_continued"]})})
+}
+
+rule_query = {
+    "pre_proc": "id",
+    "actual_check": ("state_checks", "checks", "obs"),
+    "or_continue": [{"post_proc": "update_func",
+                     "next_rule": rule_step}]
+}
+
 
 
 
