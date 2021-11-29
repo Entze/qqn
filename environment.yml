@@ -1,8 +1,14 @@
 name: qqn
 channels:
   - conda-forge
+  - pytorch
 dependencies:
-  - python>=3.9
+  - python~=3.9
+  - pytorch~=1.10
+  - pyro-ppl~=1.7
+  - cudatoolkit~=11.3
+  - tqdm~=4.62
+  - matplotlib
   - pip
   - pip:
-      - effect
+      - effect~=1.1.0
