@@ -1,4 +1,5 @@
-- effect~=1.1.0
-- pyro-ppl~=1.7.0
-- torch~=1.10.0
-- tqdm~=4.62
+pyro-ppl~=1.7.0
+torch~=1.10.0
+effect~=1.1.0
+tqdm~=4.62.3
+frozendict~=2.1.1

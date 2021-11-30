@@ -68,7 +68,7 @@ def inference_agent_guide():
     french_preference = pyro.param("french_preference", tensor(1.))
     action = pyro.sample("action",
                          dist.Categorical(logits=torch.stack((italian_preference, turkish_preference, french_preference))))
-    if action.item() == 0:
+    if action.item() == 0: # TODO: per tensor if
         meal = pyro.sample("meal", dist.Categorical(tensor([0.9, 0.1])), obs=tensor(0.))
     elif action.item() == 1:
         meal = pyro.sample("meal", dist.Categorical(tensor([0.5, 0.5])), obs=tensor(0.))
