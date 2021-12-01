@@ -112,32 +112,39 @@ def optimize_agent_preferences(state, model, guide, *args, **kwargs):
     progress = trange(opt_steps) if opt_progress else range(opt_steps)
     for i in progress:
         svi.step(state, *args, iteration=i, **kwargs)
-        step = pyro.param("{}preferences{}".format(prefix, suffix))
+        step = {k: pyro.param(k) for k in pyro.get_param_store() if k.startswith(prefix) and k.endswith(suffix)}
         steps.append(step)
         if display_preferences is not None and next_actions is not None:
             display_preferences(step, next_actions, prefix="{}:".format(i))
         if opt_timeout is not None and time.monotonic() - start > opt_timeout:
             break
 
-    if display_preferences is not None and next_actions is not None:
+    if display_preferences is not None and next_actions is not None and steps:
         display_preferences(steps[-1], next_actions)
 
     return steps
 
 
-def print_preferences(preferences, actions, decimals=4, prefix=None):
+def print_preferences(preferences, actions, decimals=4, prefix=None, outersep='; ', innersep=', '):
     if preferences is None:
         return
-    real_prob = preferences.exp()
+    print(
+        *(format_preference(name, preference, actions, decimals, innersep) for name, preference in preferences.items()),
+        outersep)
+
+
+def format_preference(name, preference, actions, decimals=4, sep=', '):
+    real_prob = preference.exp()
     real_prob_sum = real_prob.sum()
     preferences_dict = {action: real_prob[i] / real_prob_sum for i, action in enumerate(actions)}
-    print(prefix if prefix is not None else "",
-          ", ".join(map(lambda i: ("{}: {:." + str(decimals) + "f}").format(i[0], i[1]), preferences_dict.items())))
+    return name + ": " + sep.join(
+        map(lambda i: ("{}: {:." + str(decimals) + "f}").format(i[0], i[1]), preferences_dict.items()))
 
 
 example_next_actions = [
     'italian',
     'french'
+
 ]
 
 example_utility_dict = frozendict({
