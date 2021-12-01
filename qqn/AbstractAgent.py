@@ -88,7 +88,10 @@ def arg_max_agent_guide(state, *args, **kwargs):
 def optimize_agent_preferences(state, model, guide, *args, **kwargs):
     optimizer_args = {"lr": 0.025} | kwargs.pop("optimizer_args", {})
     opt_steps = kwargs.pop("opt_steps", None)
+    if opt_steps == 0:
+        return
     opt_timeout = kwargs.pop("opt_timeout", None)
+    opt_progress = kwargs.pop("opt_progress", True)
     display_preferences = kwargs.pop("display_preferences", None)
     next_actions = kwargs.get("next_actions", None)
     if opt_steps is None and opt_timeout is None:
@@ -106,23 +109,30 @@ def optimize_agent_preferences(state, model, guide, *args, **kwargs):
     steps = []
 
     start = time.monotonic()
-    for _ in trange(opt_steps):
-        svi.step(state, *args, **kwargs)
+    progress = trange(opt_steps) if opt_progress else range(opt_steps)
+    for i in progress:
+        svi.step(state, *args, iteration=i, **kwargs)
         step = pyro.param("{}preferences{}".format(prefix, suffix))
         steps.append(step)
         if display_preferences is not None and next_actions is not None:
-            display_preferences(step, next_actions)
+            display_preferences(step, next_actions, prefix="{}:".format(i))
         if opt_timeout is not None and time.monotonic() - start > opt_timeout:
             break
+
+    if display_preferences is not None and next_actions is not None:
+        display_preferences(steps[-1], next_actions)
 
     return steps
 
 
-def print_preferences(preferences, actions, decimals=4):
+def print_preferences(preferences, actions, decimals=4, prefix=None):
+    if preferences is None:
+        return
     real_prob = preferences.exp()
     real_prob_sum = real_prob.sum()
     preferences_dict = {action: real_prob[i] / real_prob_sum for i, action in enumerate(actions)}
-    print(", ".join(map(lambda i: ("{}: {:." + str(decimals) + "f}").format(i[0], i[1]), preferences_dict.items())))
+    print(prefix if prefix is not None else "",
+          ", ".join(map(lambda i: ("{}: {:." + str(decimals) + "f}").format(i[0], i[1]), preferences_dict.items())))
 
 
 example_next_actions = [
@@ -140,14 +150,14 @@ example_next_state_dist_dict = frozendict({
     'french': dist.Categorical(tensor([0.0, 1.0]))
 })
 
-#optimize_agent_preferences('initial_state',
-#                           model=arg_max_agent_model,
-#                           guide=arg_max_agent_guide,
-#                           prefix="restaurant_",
-#                           suffix="",
-#                           next_actions=example_next_actions,
-#                           next_state_dist_dict=example_next_state_dist_dict,
-#                           utility_dict=example_utility_dict,
-#                           display_preferences=print_preferences,
-#                           opt_steps=1000
-#                           )
+# optimize_agent_preferences('initial_state',
+#                            model=arg_max_agent_model,
+#                            guide=arg_max_agent_guide,
+#                            prefix="restaurant_",
+#                            suffix="",
+#                            next_actions=example_next_actions,
+#                            next_state_dist_dict=example_next_state_dist_dict,
+#                            utility_dict=example_utility_dict,
+#                            display_preferences=print_preferences,
+#                            opt_steps=1000
+#                            )
