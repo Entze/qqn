@@ -3,3 +3,4 @@ torch~=1.10.0
 effect~=1.1.0
 tqdm~=4.62.3
 frozendict~=2.1.1
+six~=1.16

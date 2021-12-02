@@ -9,6 +9,7 @@ dependencies:
   - cudatoolkit~=11.3
   - tqdm~=4.62
   - matplotlib
+  - six~=1.16
   - pip
   - pip:
       - effect~=1.1.0
