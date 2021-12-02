@@ -13,6 +13,38 @@ some_people = 'some of the people are nice'
 all_people = 'all of the people are nice'
 none_people = 'none of the people are nice'
 
+utterances_dict = {
+    some_people: 0,
+    all_people: 1,
+    none_people: 2
+}
+
+torch.manual_seed(0)
+pyro.set_rng_seed(0)
+
+cache = {
+    "literal_listener": {
+    },
+    "speaker": {
+
+    },
+    "pragmatic_listener": {
+
+    }
+}
+
+config = {
+    "num_samples": 1_000
+}
+
+
+def world_to_tensor(world):
+    return tensor(float(world["number_of_nice_people"]))
+
+
+def utterance_to_tensor(utterance):
+    return tensor(float(utterances_dict[utterance]))
+
 
 def world_generation(number_of_people=3):
     """
@@ -20,10 +52,8 @@ def world_generation(number_of_people=3):
     :return: a concrete world, with type dict
     """
     world = {
-        'type': 'world',
-        'number_of_people': number_of_people,
         'number_of_nice_people': torchdist.Categorical(
-            logits=torch.zeros(number_of_people)).sample().item()
+            logits=torch.zeros(number_of_people + 1)).sample().item()
     }
 
     return world
@@ -48,7 +78,7 @@ def basic_evidence(utterance):
         m = meaning(utterance, world)
         # pyro.factor("Basic Evidence", tensor(float(0 if m else '-inf')))
         knockout("Basic Evidence", m)
-        return world
+        return world_to_tensor(world)
 
     return model
 
@@ -58,17 +88,23 @@ def literal_listener(utterance):
     A distribution over worlds, with respect to a specific utterance.
     :return: an Infer object (Empirical Distribution)
     """
-    importance = pyro.infer.Importance(model=basic_evidence(utterance))
-    importance.run()
-    marginal = pyro.infer.EmpiricalMarginal(importance)
-    return marginal
+    if utterance not in cache["literal_listener"]:
+        importance = pyro.infer.Importance(model=basic_evidence(utterance), num_samples=config["num_samples"])
+        importance.run()
+        marginal = pyro.infer.EmpiricalMarginal(importance)
+        cache["literal_listener"][utterance] = marginal
+
+    return cache["literal_listener"][utterance]
 
 
 def listenable_evidence(world):
     def model():
         utterance = utterance_generation()
-        knockout("Listenable Evidence", world == pyro.sample("Basic Observation", literal_listener(utterance)))
-        return utterance
+        observation = pyro.sample("Basic Observation", literal_listener(utterance))
+        evidence = world_to_tensor(world) == observation
+        knockout("Listenable Evidence", evidence)
+        utterance_t = utterances_dict[utterance]
+        return tensor(float(utterance_t))
 
     return model
 
@@ -90,13 +126,21 @@ def speaker(world):
     literal listener (literal_listener).
     :return: an Infer object (Empirical Distribution)
     """
-    return Infer(model=listenable_evidence(world), posterior_method="forward")
+    if world["number_of_nice_people"] not in cache["speaker"]:
+        importance = pyro.infer.Importance(listenable_evidence(world), num_samples=config["num_samples"])
+        importance.run()
+        marginal = pyro.infer.EmpiricalMarginal(importance)
+        cache["speaker"][world["number_of_nice_people"]] = marginal
+    return cache["speaker"][world["number_of_nice_people"]]
 
 
 def speakable_evidence(utterance):
     def model():
         world = world_generation()
-        knockout("Speakable Evidence", world == pyro.sample("Basic Intent", speaker(world)))
+        knockout("Speakable Evidence", utterance_to_tensor(utterance) == pyro.sample("Basic Intent", speaker(world)))
+        return world_to_tensor(world)
+
+    return model
 
 
 def pragmatic_listener(utterance):
@@ -105,7 +149,12 @@ def pragmatic_listener(utterance):
     speaker.
     :return: an Infer object (Empirical Distribution)
     """
-    return Infer(model=speakable_evidence(utterance), posterior_method="forward")
+    if utterance not in cache["pragmatic_listener"]:
+        importance = pyro.infer.Importance(model=speakable_evidence(utterance), num_samples=config["num_samples"])
+        importance.run()
+        marginal = pyro.infer.EmpiricalMarginal(importance)
+        cache["pragmatic_listener"][utterance] = marginal
+    return cache["pragmatic_listener"][utterance]
 
 
 def meaning(utterance, world):
@@ -119,10 +168,19 @@ def meaning(utterance, world):
     if utterance == some_people:
         applicable = world['number_of_nice_people'] > 0
     elif utterance == all_people:
-        applicable = world['number_of_nice_people'] == world['number_of_people']
+        applicable = world['number_of_nice_people'] == 3
     elif utterance == none_people:
         applicable = world['number_of_nice_people'] == 0
     return applicable
 
 
-literal_listener(some_people)
+# for utt in utterances_dict.keys():
+#     literal_listener(utt)
+# for n in range(4):
+#     speaker({"number_of_nice_people": n})
+# for utt in utterances_dict.keys():
+#     pragmatic_listener(utt)
+# for n1, rsa in cache.items():
+#     for n2, m in rsa.items():
+#         viz(m, title=n1 + " " + str(n2))
+# viz(pragmatic_listener(some_people))
