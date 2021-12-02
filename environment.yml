@@ -10,6 +10,7 @@ dependencies:
   - tqdm~=4.62
   - matplotlib
   - six~=1.16
+  - seaborn
   - pip
   - pip:
       - effect~=1.1.0
