@@ -34,18 +34,15 @@ def object_prior():
 
 
 def obj_to_tensor(obj):
-    color_dec = float(colors[obj['color']])
-    shape_dec = float(shapes[obj['shape']])
-    string_dec = float(strings[obj['string']])
-    return tensor([color_dec, shape_dec, string_dec])
+    for i in range(len(objects)):
+        if objects[i] == obj:
+            return torch.as_tensor(i).float()
+    raise
 
 
 def tensor_to_obj(ten):
-    color_int = int(ten[0].item())
-    shape_int = int(ten[1].item())
-    string_int = int(ten[2].item())
-    return dict(color=list(colors.keys())[color_int], shape=list(shapes.keys())[shape_int],
-                string=list(strings.keys())[string_int])
+    obj = objects[int(ten.item())]
+    return obj
 
 
 def tensor_to_utterance(ten):
@@ -70,10 +67,11 @@ rsa_cache = dict(literal_listener={}, pragmatic_speaker={})
 def literal_listener(utterance, num_samples=100):
     if utterance not in rsa_cache['literal_listener']:
         def model():
-            obj = object_prior()
+            obj_t = pyro.sample("Basic event", obj_prior_dist)
+            obj = tensor_to_obj(obj_t)
             utt_truth_val = meaning(utterance, obj)
-            condition("Basic evidence", utt_truth_val)
-            return obj_to_tensor(obj)
+            condition("Basic observation", utt_truth_val)
+            return obj_t
 
         importance = pyro.infer.Importance(model=model, num_samples=num_samples)
         importance.run()
@@ -91,10 +89,14 @@ def pragmatic_speaker(obj, num_samples=100, alpha=1.0):
             utterance = tensor_to_utterance(utterance_t)
             obj_t = obj_to_tensor(obj)
             lit_lis = literal_listener(utterance)
+            lit_lis_sample = lit_lis.sample()
             literal_listener_score_t = lit_lis.log_prob(obj_t).exp()
             cost_of_utterance = cost(utterance)
             cost_of_utterance_t = torch.as_tensor(cost_of_utterance).float()
-            pyro.factor("First Order Observation", alpha_t * (literal_listener_score_t - cost_of_utterance_t))
+            # vvv SOFTMAX vvv
+            #pyro.factor("First Order Observation", alpha_t * (literal_listener_score_t - cost_of_utterance_t))
+            condition("First Order Observation", lit_lis_sample == obj_t)
+            # ^^^ ARGMAX ^^^
             return utterance_t
 
         importance = pyro.infer.Importance(model=model, num_samples=num_samples)
@@ -104,7 +106,7 @@ def pragmatic_speaker(obj, num_samples=100, alpha=1.0):
     return rsa_cache['pragmatic_speaker'][obj]
 
 
-dist = literal_listener("blue")
+dist = literal_listener("red")
 for i in range(10):
     print(tensor_to_obj(dist.sample()))
 
