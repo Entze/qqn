@@ -15,3 +15,4 @@ dependencies:
   - pip:
       - effect~=1.1.0
       - frozendict~=2.1.1
+      - frozenlist~=1.2.0
