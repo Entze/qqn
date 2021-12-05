@@ -5,7 +5,7 @@ import pyro.distributions as dist
 import torch
 from torch import tensor
 
-rsa_cache = dict(literal_listener={}, pragmatic_speaker={}, pragmatic_listener={})
+rsa_cache = dict(literal_listener={}, literal_speaker={}, pragmatic_listener={})
 
 
 def condition(name: str, val: bool = False):
@@ -14,15 +14,14 @@ def condition(name: str, val: bool = False):
 
 book = {
     "prices": [2, 6, 10, 14, 18, 22, 26, 30],
-    "probabilities": [1, 2, 3, 4, 4, 3, 2, 1]
+    "probabilities": [.1, .2, .3, .4, .4, .3, .2, .1]
 }
 
-book_price_dist = pyro.Categorical(logits=tensor(book["probabilities"]))
+book_price_dist = dist.Categorical(logits=tensor(book["probabilities"]))
 
 
 def tensor_to_book_price(tens):
     return book["prices"][int(tens.item())]
-
 
 
 def book_price_prior():
@@ -31,7 +30,7 @@ def book_price_prior():
 
 
 def theta_prior():
-    return pyro.Categorical(logits=torch.zeros(len(book["prices"]))).sample()
+    return dist.Categorical(logits=torch.zeros(len(book["prices"]))).sample()
 
 
 utterances = ["expensive", ""]
@@ -45,8 +44,15 @@ cost = {
 def tensor_to_utterance(tens):
     return utterances[int(tens.item())]
 
+
+def utterance_to_tensor(utt):
+    for i, u in enumerate(utterances):
+        if u == utt:
+            return tensor(i).float()
+
+
 def utterance_prior():
-    return pyro.Categorical(logits=torch.zeros(len(utterances))).sample()
+    return dist.Categorical(logits=torch.zeros(len(utterances))).sample()
 
 
 def meaning(utterance, price, theta):
@@ -85,7 +91,7 @@ def literal_speaker(price, theta, alpha=1., num_samples=10):
             utterance = utterance_prior()
             alpha_t = tensor(alpha).float()
             lit_lis = literal_listener(utterance, theta, num_samples=num_samples)
-            # price here price_t
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!! price is a tensor !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             state_prob = lit_lis.log_prob(price)
             # not sure about tensor to utterance
             pyro.factor("speak_factor", alpha_t * (state_prob - cost[tensor_to_utterance(utterance)]))
@@ -104,12 +110,12 @@ def pragmatic_listener(utterance, num_samples=10):
     if utterance not in rsa_cache["pragmatic_listener"]:
         def model():
             # //////// priors ////////
-            price = book_price_dist.sample()
+            price = book_price_dist.sample() # TODO: this is a tensor
             theta = theta_prior()
             # ////////////////////////
 
-            prag_speak = pragmatic_speaker(price, theta, num_samples=num_samples)
-            pyro.sample("speak_utt", prag_speak, obs=utterance)
+            prag_speak = literal_speaker(price, theta, num_samples=num_samples)
+            pyro.sample("speak_utt", prag_speak, obs=utterance_to_tensor(utterance))
             result = torch.stack([price, theta])
             return result
 
@@ -120,9 +126,9 @@ def pragmatic_listener(utterance, num_samples=10):
     return rsa_cache["pragmatic_listener"][utterance]
 
 
-prag_list = pragmatic_listener("expensive", num_samples=1_000)
+prag_list = pragmatic_listener("expensive", num_samples=20)
 
 for _ in range(100):
     tens = prag_list.sample()
     l = tens.tolist()
-    print(tensor_to_state(tensor(l[0])), l[1], tensor_to_arousal(tensor(l[2])))
+    print(tens)

@@ -142,9 +142,6 @@ def theta_prior_lookup(item):
     return lambda: dist.Categorical(logits=torch.zeros(thetas)).sample()
 
 
-# optimality parameter
-alpha = 2
-
 
 
 utterances = ["expensive", ""]
@@ -160,7 +157,7 @@ def tensor_to_utterance(tens):
 
 
 def utterance_prior():
-    return pyro.Categorical(logits=torch.zeros(len(utterances))).sample()
+    return dist.Categorical(logits=torch.zeros(len(utterances))).sample()
 
 
 def meaning(utterance, price, theta):
@@ -231,7 +228,7 @@ def pragmatic_listener(utterance, item, num_samples=10):
             theta = theta_prior()
             # ////////////////////////
 
-            prag_speak = pragmatic_speaker(price, theta, item, num_samples=num_samples)
+            prag_speak = pragmatic_listener(price, theta, item, num_samples=num_samples)
             state_score = prag_speak.log_prob(utterance)
 
             # not so sure
