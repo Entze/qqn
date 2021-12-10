@@ -14,7 +14,7 @@ def transition_gridworld(gridworld_t: Tensor, move: Tensor, player_symb: int = 2
     x, y = position[0], position[1]
     new_gridworld_t[y, x] = 0
     t = torch.where(move == 0, tensor([0, -1]),
-                torch.where(move == 1, tensor([1, 0]), torch.where(move == 2, tensor([0, 1]), tensor([-1, 0]))))
+                    torch.where(move == 1, tensor([1, 0]), torch.where(move == 2, tensor([0, 1]), tensor([-1, 0]))))
     npos = position + t
     nx, ny = npos[0], npos[1]
     new_gridworld_t[ny, nx] = player_symb
@@ -28,8 +28,9 @@ def make_gridworld(grid: List[List[str]], start: Tuple[int, int] = (0, 0),
     symbol_dict = {' ': 0, '#': 1, 'P': 2} | symbol_dict
     height = len(grid)
     x, y = start
-    grid[y][x] = 'P'
-    return gridworld_to_tensor(grid, symbol_dict)
+    g = grid.copy()
+    g[y][x] = 'P'
+    return gridworld_to_tensor(g, symbol_dict)
 
 
 def current_agent_position(gridworld_t: Tensor, player_symb: int = 2) -> Tensor:
@@ -67,14 +68,17 @@ def display_gridworld_tensor(gridworld_t: Tensor, symbol_dict: Dict[int, str]):
     height = gridworld_t.size(dim=0)
     width = gridworld_t.size(dim=1)
     max_width = max(len(s) for s in symbol_dict.values())
-    d = '+' + (''.join(('-' * max_width) + '+') * width) + '\n'
+    d = '   ' + ' '.join(str(w).center(max_width) for w in range(width)) + ' \n'
+    d += '  +' + (''.join(('-' * max_width) + '+') * width) + '\n'
+    i = 0
     for rows in gridworld_t:
-        d += '|'
+        d += f'{i} |'
+        i += 1
         for cell in rows:
             text = symbol_dict.get(cell.item(), "X").center(max_width)
             d += text
             d += '|'
-        d += '\n+' + (''.join(('-' * max_width) + '+') * width) + '\n'
+        d += '\n  +' + (''.join(('-' * max_width) + '+') * width) + '\n'
     print(d)
 
 
@@ -93,14 +97,18 @@ def display_gridworld_list(gridworld_list: List[List[str]]):
     print(d)
 
 
-def display_gridworld(grid_world, symbol_dict: Optional[Dict[int, str]] = None):
+def display_gridworld(grid_world, symbol_dict: Optional[Union[Dict[int, str], Dict[str, int]]] = None):
     if symbol_dict is None:
         symbol_dict = {}
+    if symbol_dict and isinstance(next(k for k in symbol_dict.keys()), str):
+        symbol_dict = invert_symbol_dict(symbol_dict)
     symbol_dict = {0: ' ', 1: '#', 2: 'P'} | symbol_dict
     if isinstance(grid_world, Tensor):
-        display_gridworld_tensor(grid_world, symbol_dict)
+        g = torch.clone(grid_world)
+        display_gridworld_tensor(g, symbol_dict)
     elif isinstance(grid_world, list):
-        display_gridworld_list(grid_world)
+        g = grid_world.copy()
+        display_gridworld_list(g)
 
 
 def invert_symbol_dict(symbol_dict: Dict[int, str]) -> Dict[str, int]:
