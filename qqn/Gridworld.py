@@ -1,6 +1,6 @@
 from collections import defaultdict
 from itertools import repeat
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 
 import torch
 from torch import Tensor, tensor, int64
@@ -8,27 +8,57 @@ from torch import Tensor, tensor, int64
 gridworld_actions = ['N', 'O', 'S', 'W']
 
 
-def legal_actions(gridworld_t: Tensor, position: Tensor) -> Tensor:
+def transition_gridworld(gridworld_t: Tensor, move: Tensor, player_symb: int = 2) -> Tensor:
+    position = current_agent_position(gridworld_t, player_symb)
+    new_gridworld_t = torch.clone(gridworld_t)
+    x, y = position[0], position[1]
+    new_gridworld_t[y, x] = 0
+    t = torch.where(move == 0, tensor([0, -1]),
+                torch.where(move == 1, tensor([1, 0]), torch.where(move == 2, tensor([0, 1]), tensor([-1, 0]))))
+    npos = position + t
+    nx, ny = npos[0], npos[1]
+    new_gridworld_t[ny, nx] = player_symb
+    return new_gridworld_t
+
+
+def make_gridworld(grid: List[List[str]], start: Tuple[int, int] = (0, 0),
+                   symbol_dict: Optional[Dict[str, int]] = None):
+    if symbol_dict is None:
+        symbol_dict = defaultdict(lambda: 'X')
+    symbol_dict = {' ': 0, '#': 1, 'P': 2} | symbol_dict
+    height = len(grid)
+    x, y = start
+    grid[y][x] = 'P'
+    return gridworld_to_tensor(grid, symbol_dict)
+
+
+def current_agent_position(gridworld_t: Tensor, player_symb: int = 2) -> Tensor:
+    return torch.squeeze((gridworld_t == player_symb).nonzero()).flip([0])
+
+
+def legal_actions(gridworld_t: Tensor, irrtraversable_symb: int = 1, player_symb: int = 2) -> Tensor:
     height = gridworld_t.size(dim=0)
     width = gridworld_t.size(dim=1)
     allowed_moves = tensor([True, True, True, True])
 
-    at_zero = position == 1
+    position = current_agent_position(gridworld_t, player_symb)
+
+    at_zero = position == 0
     allowed_moves[3] = allowed_moves[3] and not at_zero[0]
-    allowed_moves[2] = allowed_moves[2] and not at_zero[1]
+    allowed_moves[0] = allowed_moves[0] and not at_zero[1]
 
-    at_edge = torch.logical_or(position == height, position == width)
+    at_edge = torch.logical_or(position == (height - 1), position == (width - 1))
     allowed_moves[1] = allowed_moves[1] and not at_edge[0]
-    allowed_moves[0] = allowed_moves[0] and not at_edge[1]
+    allowed_moves[2] = allowed_moves[2] and not at_edge[1]
 
-    x = position[0] - 1
-    y = width - position[1]
+    x = position[0]
+    y = position[1]
 
-    allowed_moves[0] = allowed_moves[0] and (gridworld_t[y - 1, x] != 1)
-    allowed_moves[2] = allowed_moves[2] and (gridworld_t[y + 1, x] != 1)
+    allowed_moves[0] = allowed_moves[0] and (gridworld_t[y - 1, x] != irrtraversable_symb)
+    allowed_moves[2] = allowed_moves[2] and (gridworld_t[y + 1, x] != irrtraversable_symb)
 
-    allowed_moves[1] = allowed_moves[1] and (gridworld_t[y, x + 1] != 1)
-    allowed_moves[3] = allowed_moves[3] and (gridworld_t[y, x - 1] != 1)
+    allowed_moves[1] = allowed_moves[1] and (gridworld_t[y, x + 1] != irrtraversable_symb)
+    allowed_moves[3] = allowed_moves[3] and (gridworld_t[y, x - 1] != irrtraversable_symb)
 
     return allowed_moves
 
@@ -87,4 +117,4 @@ def gridworld_to_tensor(gridworld_list: List[List[str]],
     else:
         inverse_symbol_dict = {' ': 0, '#': 1, 'P': 2}
 
-    return tensor([[inverse_symbol_dict.get(cell, 'X') for cell in rows] for rows in gridworld_list], dtype=int64)
+    return tensor([[inverse_symbol_dict.get(cell, 4) for cell in rows] for rows in gridworld_list], dtype=int64)
