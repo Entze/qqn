@@ -7,6 +7,8 @@ from pyro import poutine
 from pyro.infer import Trace_ELBO, SVI
 from pyro.optim import Adam
 import torch
+from pyro.poutine.messenger import Messenger
+from pyro.poutine.runtime import am_i_wrapped, effectful
 from torch import tensor, Tensor
 from tqdm import trange
 import qqn.gridworld as gw
@@ -42,8 +44,94 @@ grid_raw = [
 
 gw_t = gw.as_tensor(grid_raw)
 
+policy_store = {}
+state_value_store = {}
+action_value_store = {}
+
+
+def state_to_key(state):
+    return str(state)
+
+
+def _from_policy_store(name, state, init_tensor=None):
+    state_key = state_to_key(state)
+    if init_tensor is None:
+        return policy_store[name][state_key]
+    else:
+        if name not in policy_store:
+            policy_store[name] = {}
+        return policy_store[name].setdefault(state_key, init_tensor)
+
+
+_policy_eff = effectful(_from_policy_store, type='policy')
+
+
+def policy_eff(name, state, init_tensor=None):
+    args = (name, state,) if init_tensor is None else (name, state, init_tensor)
+    return _policy_eff(*args)
+
+
+def _from_state_value_store(state, state_value_fn=None):
+    state_key = state_to_key(state)
+    if state_value_fn is None:
+        return state_value_store[state_key]
+    else:
+        return state_value_store.setdefault(state_key, state_value_fn(state))
+
+
+_state_value_eff = effectful(_from_state_value_store, type='state_value')
+
+
+def state_value_eff(state, state_value_fn=None):
+    args = (state,) if state_value_fn is None else (state, state_value_fn)
+    return _state_value_eff(*args)
+
 
 def state_value(state):
+    return state_value_eff(state, concrete_state_value)
+
+
+class StateValueMessenger(Messenger):
+    def __init__(self, state_value_fn):
+        super().__init__()
+        self.state_value_fn = state_value_fn
+
+    def _process_message(self, msg):
+        if msg['type'] == 'state_value':
+            msg['value'] = self.state_value_fn(*msg['args'], **msg['kwargs'])
+        return None
+
+
+def _from_action_value_store(state, action, action_value_fn=None):
+    state_key = state_to_key(state)
+    action_key = action.item()
+    if action_value_fn is None:
+        return action_value_store[state_key][action_key]
+    else:
+        if state_key not in action_value_store:
+            action_value_store[state_key] = {}
+        return action_value_store[state_key].setdefault(action_key, action_value_fn(state, action))
+
+
+_action_value_eff = effectful(_from_action_value_store, type='action_value')
+
+
+def action_value_eff(state, action, action_value_fn=None):
+    args = (state, action,) if action_value_fn is None else (state, action, action_value_fn)
+    return _action_value_eff(*args)
+
+
+class ActionValueMessenger(Messenger):
+    def __init__(self, action_value_fn):
+        super().__init__()
+        self.action_value_fn = action_value_fn
+
+    def _process_message(self, msg):
+        if msg['type'] == 'action_value':
+            msg['value'] = self.action_value_fn(*msg['args'], **msg['kwargs'])
+
+
+def concrete_state_value(state, *args, **kwargs):
     """
     Rates the value of a state
     :param state: a tensor
@@ -61,7 +149,24 @@ def state_value(state):
     return tensor(0.)
 
 
-def action_value(state, action):
+def alt_concrete_state_value(state, *args, **kwargs):
+    pos = state[1:]
+    if (pos == tensor([0, 7])).all():
+        return tensor(2.)  # Donut S
+    elif (pos == tensor([2, 2])).all():
+        return tensor(2.)
+    elif (pos == tensor([4, 0])).all():
+        return tensor(1.)
+    elif (pos == tensor([5, 5])).all():
+        return tensor(1.)
+    return tensor(0.)
+
+
+def action_value(state, action, *args, **kwargs):
+    return action_value_eff(state, action, concrete_action_value)
+
+
+def concrete_action_value(state, action, *args, **kwargs):
     """
     Rates the value of an action in a certain state
     :param state: a tensor
@@ -75,7 +180,7 @@ def action_value(state, action):
     new_time_left = next_state[0]
     if new_time_left <= 0:
         return primary_value
-    pol = policy(next_state)
+    pol = policy("policy", next_state)
     secondary_value = policy_value(pol, next_state)
     return primary_value + secondary_value
 
@@ -105,24 +210,25 @@ def policy_estimation_sampling_model(pol, state, time_left):
     return action_value(state, action)
 
 
-def policy(state):
+def policy(name, state):
     """
     Returns the logits (unnormalized) for a categorical distribution over all possible actions.
+    :param name:
     :param state: a tensor
     :return: logits
     """
-    return action_prior(state)
+    return policy_eff(name, state, action_prior(state))
 
-    if 'policy' not in cache:
-        cache['policy'] = {}
-    state_idx = state.tolist()
-    if state_idx not in cache['policy']:
-        svi = SVI(policy_model, policy_guide, Adam({"lr": 0.025}), Trace_ELBO())
-        cache['policy'][state_idx] = pyro.param(f"p_preferences_{state_idx}", action_prior(state))
-        for _ in trange(100):
-            svi.step(state)
-            cache['policy'][state_idx] = pyro.param(f"p_preferences_{state_idx}")
-    return cache['policy'][state_idx]
+    # if 'policy' not in cache:
+    #     cache['policy'] = {}
+    # state_idx = state.tolist()
+    # if state_idx not in cache['policy']:
+    #     svi = SVI(policy_model, policy_guide, Adam({"lr": 0.025}), Trace_ELBO())
+    #     cache['policy'][state_idx] = pyro.param(f"p_preferences_{state_idx}", action_prior(state))
+    #     for _ in trange(100):
+    #         svi.step(state)
+    #         cache['policy'][state_idx] = pyro.param(f"p_preferences_{state_idx}")
+    # return cache['policy'][state_idx]
 
 
 def policy_model(state):
@@ -179,9 +285,9 @@ def simulate_random(init_state):
     x, y = next[1].item(), next[2].item()
     trace.append(((x, y), None))
     while next[0] > 0:
-        p = policy(next)
+        p = policy("policy", next)
         a = dist.Categorical(logits=p).sample()
-        next = transition(p, a)
+        next = transition(next, a)
         x, y = next[1].item(), next[2].item()
         trace.append(((x, y), a.item()))
     x, y = next[1].item(), next[2].item()
@@ -196,6 +302,7 @@ def tracer(init):
         prospect_traces = chain(*[tracer(next) for next in next_states])
         return [[init] + trace for trace in prospect_traces]
     return [[init]]
+
 
 def simulate_all(state: Tensor):
     t, x, y = state.tolist()
@@ -216,34 +323,6 @@ def simulate_all(state: Tensor):
                 trace.append((t, (x, y), a))
                 unfinished_traces.append(trace)
     return finished_traces
-
-
-def simulate(init_state):
-    curr_trace = []
-    all_traces = []
-    x, y = init_state[1].item(), init_state[2].item()
-    curr_trace.append(((x, y), -1))
-    if init_state[0] <= 0:
-        all_traces.append(curr_trace)
-    else:
-        for a, t in enumerate(gw.allowed_actions(gw_t, init_state)):
-            if t:
-                all_traces += simulate_action(init_state, tensor(a), curr_trace.copy())
-    return all_traces
-
-
-def simulate_action(state, action, curr_trace):
-    next_state = transition(state, action)
-    x, y = next_state[1].item(), next_state[2].item()
-    curr_trace.append(((x, y), action.item()))
-    all_traces = []
-    if next_state[0] <= 0:
-        all_traces.append(curr_trace)
-    else:
-        for a, t in enumerate(gw.allowed_actions(gw_t, state)):
-            if t:
-                all_traces += simulate_action(next_state, tensor(a), curr_trace)
-    return all_traces
 
 
 def test():
@@ -279,13 +358,31 @@ def test():
                             print("x:", x, "y:", y, "a:", a, val)
 
     print('#' * 80)
-
     t = simulate_all(tensor([1, 0, 6]))
     print(t)
     t = simulate_all(tensor([2, 1, 6]))
     print(t)
+    print('#' * 80)
+    t = simulate_random(tensor([2, 1, 6]))
+    print(t)
 
     print('#' * 80)
+    print(state_value(tensor([0, 0, 7])))
+    print('#' * 80)
+
+    with StateValueMessenger(alt_concrete_state_value):
+        print(state_value(tensor([0, 0, 7])))
+
+    print('#' * 80)
+    print(action_value(tensor([1, 0, 6]), tensor(2)))
+    print(action_value(tensor([1, 0, 6]), tensor(1)))
+    print('#' * 80)
+
+    with ActionValueMessenger(lambda *a, **kw: tensor(-1.)):
+        print('#' * 80)
+        print(action_value(tensor([1, 0, 6]), tensor(2)))
+        print(action_value(tensor([1, 0, 6]), tensor(1)))
+        print('#' * 80)
 
     # for x in range(6):
     #     for y in range(8):
@@ -304,4 +401,3 @@ pyro.set_rng_seed(0)
 pyro.clear_param_store()
 gw.display(grid_raw)
 test()
-
