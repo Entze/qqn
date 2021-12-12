@@ -47,6 +47,7 @@ gw_t = gw.as_tensor(grid_raw)
 policy_store = {}
 state_value_store = {}
 action_value_store = {}
+policy_value_store = {}
 
 
 def state_to_key(state):
@@ -185,8 +186,67 @@ def concrete_action_value(state, action, *args, **kwargs):
     return primary_value + secondary_value
 
 
-def policy_value(pol, state):
-    return policy_value_exact(pol, state)
+def _from_policy_value_store(pol, state, policy_value_fn=None):
+    state_key = state_to_key(state)
+    policy_key = str(policy)
+    if policy_value_fn is None:
+        return policy_value_store[state_key][policy_key]
+    else:
+        if state_key not in policy_value_store:
+            policy_value_store[state_key] = {}
+        return policy_value_store[state_key].setdefault(policy_key, policy_value_fn(pol, state))
+
+
+_policy_value_eff = effectful(_from_policy_value_store, type='policy_value')
+
+
+def policy_value_eff(pol, state, policy_value_fn=None):
+    args = (pol, state,) if policy_value_fn is None else (pol, state, policy_value_fn)
+    return _policy_value_eff(*args)
+
+
+class PolicyValueMessenger(Messenger):
+    def __init__(self, policy_value_fn):
+        super().__init__()
+        self.policy_value_fn = policy_value_fn
+
+    def _process_message(self, msg):
+        if msg['type'] == 'policy_value':
+            msg['value'] = self.policy_value_fn(*msg['args'], **msg['kwargs'])
+
+
+def policy_value(pol, state, *args, **kwargs):
+    return policy_value_eff(pol, state, policy_value_exact)
+
+
+# def policy_value(pol, state):
+#    return policy_value_exact(pol, state)
+
+
+def do_transition(state, action_idx, transition_fn=None):
+    return transition_fn(state, action_idx)
+
+
+_transition_eff = effectful(do_transition, type='transition')
+
+
+def transition_eff(state, action_idx, transition_fn=None):
+    args = (state, action_idx, transition_fn)
+    return _transition_eff(*args)
+
+
+def transition(state, action_idx):
+    return transition_eff(state, action_idx, concrete_transition)
+
+
+class TransitionMessenger(Messenger):
+    def __init__(self, transition_func):
+        super().__init__()
+        self.transition_func = transition_func
+
+    def _process_message(self, msg):
+        if msg['type'] == 'transition':
+            msg['value'] = self.transition_func(*msg['args'], **msg['kwargs'])
 
 
 def policy_value_exact(pol: Tensor, state):
@@ -250,7 +310,7 @@ def policy_guide(state, time_left):
 # Action 2: South
 # Action 3: West
 
-def transition(state, action_idx):
+def concrete_transition(state, action_idx, *args, **kwargs):
     t = tensor([0, 0])
     s = torch.clone(state)
     if action_idx == 0:  # North
@@ -267,6 +327,28 @@ def transition(state, action_idx):
 
     s[0] -= 1
     if state_value(s) > 0:
+        s[0] = 0
+    s[1:] += t
+    return s
+
+
+def alt_concrete_transition(state, action_idx, *args, **kwargs):
+    t = tensor([0, 0])
+    s = torch.clone(state)
+    if action_idx == 0:  # North
+        t = tensor([0, -1])  # Go one up
+
+    elif action_idx == 1:  # East
+        t = tensor([1, 0])  # Go one right
+
+    elif action_idx == 2:  # South
+        t = tensor([0, 1])  # Go one down
+
+    elif action_idx == 3:  # West
+        t = tensor([-1, 0])  # Go one left
+
+    s[0] -= 2
+    if state_value(s) > 0 or s[0] < 0:
         s[0] = 0
     s[1:] += t
     return s
@@ -323,6 +405,28 @@ def simulate_all(state: Tensor):
                 trace.append((t, (x, y), a))
                 unfinished_traces.append(trace)
     return finished_traces
+
+
+def simulate_placeholder(state):
+    return None
+
+
+_simulate_eff = effectful(simulate_placeholder, type='simulate')
+
+
+def simulate_eff(state):
+    args = (state,)
+    return _simulate_eff(*args)
+
+
+class SimulateMessenger(Messenger):
+    def __init__(self, simulator_func):
+        super().__init__()
+        self.simulator_func = simulator_func
+
+    def _process_message(self, msg):
+        if msg['type'] == 'simulate':
+            msg['value'] = self.simulator_func(*msg['args'], **msg['kwargs'])
 
 
 def test():
@@ -383,6 +487,24 @@ def test():
         print(action_value(tensor([1, 0, 6]), tensor(2)))
         print(action_value(tensor([1, 0, 6]), tensor(1)))
         print('#' * 80)
+
+    with TransitionMessenger(alt_concrete_transition):
+        t = simulate_all(tensor([2, 1, 6]))
+        print(t)
+    print('#' * 80)
+
+    print('#' * 80)
+    t = simulate_eff(tensor([1, 0, 6]))
+    print(t)
+    t = simulate_eff(tensor([2, 1, 6]))
+    print(t)
+
+    print('#' * 80)
+    with SimulateMessenger(simulate_all):
+        t = simulate_eff(tensor([1, 0, 6]))
+        print(t)
+        t = simulate_eff(tensor([2, 1, 6]))
+        print(t)
 
     # for x in range(6):
     #     for y in range(8):
