@@ -5,3 +5,5 @@ tqdm~=4.62.3
 frozendict~=2.1.1
 frozenlist~=1.2.0
 six~=1.16
+matplotlib~=3.5.0
+seaborn~=0.11.2
