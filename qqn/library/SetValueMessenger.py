@@ -1,3 +1,4 @@
+from numbers import Number
 from typing import Callable
 
 from pyro.poutine.messenger import Messenger
@@ -14,7 +15,7 @@ class SetValueMessenger(Messenger):
     def _access(self, *args, **kwargs):
         if isinstance(self.authority, Callable):
             return self.authority(*args, **kwargs)
-        elif any(isinstance(self.authority, t) for t in (bool, int, float, complex, str, Tensor)):
+        elif any(isinstance(self.authority, t) for t in (Number, str, Tensor)):
             return self.authority
         # TODO: Accessible? At-able?
         raise NotImplementedError

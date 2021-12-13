@@ -34,4 +34,5 @@ class SoftmaxAgentMessenger(Messenger):
             msg['value'] = value
 
 
-softmax_agent = SoftmaxAgentMessenger()
+def softmax_agent():
+    return SoftmaxAgentMessenger()

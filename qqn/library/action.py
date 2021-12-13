@@ -4,8 +4,13 @@ from torch import tensor
 
 from qqn.library.common import func_composition, const
 
+
+def all_actions_default():
+    return tensor(range(nr_of_actions_eff()))
+
+
 all_actions_type = 'all_actions'
-_all_actions_eff = effectful(list, type=all_actions_type)
+_all_actions_eff = effectful(all_actions_default, type=all_actions_type)
 
 
 def all_actions_eff():
@@ -32,7 +37,7 @@ def action_islegal_eff(state, action):
 
 
 def action_prior_default(state):
-    nr_of_actions = nr_of_actions_eff()
+    nr_of_actions = nr_of_actions_eff()  # TODO: BUG
     logits = torch.zeros(nr_of_actions).float()
     actions = tensor(range(nr_of_actions))
 

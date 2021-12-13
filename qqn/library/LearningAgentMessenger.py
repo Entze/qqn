@@ -3,13 +3,15 @@ from numbers import Number
 from typing import Callable
 
 import pyro
+import pyro.infer
 import pyro.distributions as dist
 from pyro import poutine
 from pyro.poutine.messenger import Messenger
 
-from qqn.library.action import action_prior_eff
+from qqn.library.action import action_prior_eff, all_actions_eff
 from qqn.library.common import const
 from qqn.library.option import option_estimator_eff
+from qqn.library.policy import policy_type, policy_posterior_type, policy_distribution_type
 from qqn.library.state import state_key_eff
 
 
@@ -26,17 +28,40 @@ class LearningAgentMessenger(Messenger):
         self.lru_cache_min_accessed = None
         self.lru_cache_accesses = defaultdict(int)
         self.lru_cache = dict()
+        self.all_actions = all_actions_eff()
 
-    def policy(self, state):
+    def policy_posterior(self, state):
         key = state_key_eff(state)
         if key in self.lru_cache:
             self.lru_cache_accesses[key] += 1
         else:
-            optim, posterior = self._optimize(state)
+            optim, marginal, posterior = self._optimize(state)
             self.lru_cache[key]['optim'] = optim
-            self.lru_cache[key]['value'] = posterior
+            self.lru_cache[key]['marginal'] = marginal
+            self.lru_cache[key]['posterior'] = posterior
+            self.lru_cache[key]['distribution'] = dist.Categorical(logits=posterior)
 
-        return self.lru_cache[key]['value']
+        return self.lru_cache[key]['posterior']
+
+    def policy_distribution(self, state):
+        key = state_key_eff(state)
+        self.policy_posterior(state)
+        return self.lru_cache[key]['distribution']
+
+    def policy(self, state):
+        return self.policy_distribution(state).sample()
+
+    def _process_message(self, msg):
+        args = msg['args']
+        if msg['type'] == policy_type:
+            state = args[0]
+            msg['value'] = self.policy(state)
+        elif msg['type'] == policy_posterior_type:
+            state = args[0]
+            msg['value'] = self.policy_posterior(state)
+        elif msg['type'] == policy_distribution_type:
+            state = args[0]
+            msg['value'] = self.policy_distribution(state)
 
     def _optimize(self, state):
         raise NotImplementedError
@@ -72,7 +97,12 @@ class LearningAgentMessenger(Messenger):
 
 
 class SamplingAgentMessenger(LearningAgentMessenger):
-    pass
+
+    def _optimize(self, state):
+        importance = pyro.infer.Importance(model=self._model, num_samples=self.optimization_steps)
+        importance.run(state)
+        marginal = pyro.infer.EmpiricalMarginal(importance)
+        return None, marginal, marginal.log_prob(self.all_actions)
 
 
 class SVIAgentMessenger(LearningAgentMessenger):
