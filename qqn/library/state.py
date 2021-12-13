@@ -1,7 +1,7 @@
 from pyro.poutine.runtime import effectful
 
 from qqn.library.SetValueMessenger import SetValueMessenger
-from qqn.library.common import nothing, fst_default, gt_zero, func_composition
+from qqn.library.common import nothing, fst_default, gt_zero, func_composition, le_zero
 
 _state_embedding_eff = effectful(nothing, type='state_embedding')
 
@@ -27,15 +27,16 @@ def state_resource_eff(state):
     return _state_resource_eff(*args)
 
 
-_resource_left_eff = effectful(gt_zero, type='resource_left')
+_resource_left_eff = effectful(le_zero, type='resource_left')
 
 
-def resource_left_eff(resource):
+def resource_depleted_eff(resource):
     args = (resource,)
     return _resource_left_eff(*args)
 
 
-_state_isfinal_eff = effectful(func_composition(resource_left_eff, state_resource_eff), type='state_isfinal')
+state_isfinal_type = 'state_isfinal'
+_state_isfinal_eff = effectful(func_composition(state_resource_eff, resource_depleted_eff), type=state_isfinal_type)
 
 
 def state_isfinal_eff(state):
@@ -43,7 +44,8 @@ def state_isfinal_eff(state):
     return _state_isfinal_eff(*args)
 
 
-_state_value_eff = effectful(nothing, type='state_value')
+state_value_type = 'state_value'
+_state_value_eff = effectful(nothing, type=state_value_type)
 
 
 def state_value_eff(state):
@@ -54,7 +56,7 @@ def state_value_eff(state):
 class BaseStateValueMessenger(SetValueMessenger):
 
     def __init__(self, authority):
-        super().__init__('state_value', authority)
+        super().__init__(state_value_type, authority)
 
 
 class StateValueFunctionMessenger(BaseStateValueMessenger):

@@ -1,5 +1,7 @@
 from typing import Iterable, Iterator
 
+from torch import Tensor
+
 
 def nothing(*args, **kwargs):
     return None
@@ -18,24 +20,36 @@ def fst(coll):
 
 
 def fst_default(coll, default=None):
-    if hasattr(coll, "__getitem__"):
-        coll.get(0, default)
+    if any(isinstance(coll, t) for t in (list, dict)):
+        return coll.get(0, default)
+    elif hasattr(coll, "__getitem__"):
+        try:
+            return coll[0]
+        except IndexError:
+            return default
     elif isinstance(coll, Iterator):
         try:
             return next(coll)
         except StopIteration:
             return default
-        except Exception:
-            raise Exception
     return default
 
 
 def snd(coll):
-    pass
+    if hasattr(coll, "__getitem__"):
+        return coll[1]
+    elif isinstance(coll, Iterator):
+        next(coll)
+        return next(coll)
+    raise Exception(f"Cannot access second element of type {type(coll).__name__}")
 
 
 def gt_zero(val):
     return val > 0
+
+
+def le_zero(val):
+    return val <= 0
 
 
 def const(*args, **kwargs):

@@ -3,7 +3,8 @@ from pyro.poutine.runtime import effectful
 from qqn.library.SetValueMessenger import SetValueMessenger
 from qqn.library.common import nothing
 
-_transition_eff = effectful(nothing, type='transition')
+transition_type = 'transition'
+_transition_eff = effectful(nothing, type=transition_type)
 
 
 def transition_eff(state, action):
@@ -14,7 +15,7 @@ def transition_eff(state, action):
 class BaseTransitionMessenger(SetValueMessenger):
 
     def __init__(self, authority):
-        super().__init__('transition', authority)
+        super().__init__(transition_type, authority)
 
 
 class TransitionFunctionMessenger(BaseTransitionMessenger):

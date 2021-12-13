@@ -4,7 +4,7 @@ import operator
 import random
 from typing import List
 
-inti_state = []
+init_state = []
 
 
 def get_actions(state):
@@ -90,3 +90,5 @@ def test():
     print("state_val_pol mit select_max_idx, state_val_sum {True: 1, False: 0}")
     print(proceed(5, [True],
                   state_val_pol(select_max_idx, foldable_state_value(operator.add, lambda e: {True: 1, False: 0}[e]))))
+
+test()
