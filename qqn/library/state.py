@@ -12,7 +12,7 @@ def state_embedding_eff(state):
 
 
 state_key_type = 'state_key'
-_state_key_eff = effectful(str, type=state_key_type) # TODO: implement own effect stack
+_state_key_eff = effectful(hash, type=state_key_type) # TODO: implement own effect stack
 
 
 def state_key_eff(state):
