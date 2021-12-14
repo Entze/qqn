@@ -39,12 +39,11 @@ def action_islegal_eff(state, action):
 def action_prior_default(state):
     nr_of_actions = nr_of_actions_eff()  # TODO: BUG
     logits = torch.zeros(nr_of_actions).float()
-    actions = tensor(range(nr_of_actions))
+    actions = all_actions_eff()
 
-    def part_action_isilllegal(action):
-        return not action_islegal_eff(state, action)
-
-    logits[actions.cpu().apply_(part_action_isilllegal)] = float('-inf')
+    for a in actions:
+        if not action_islegal_eff(state, a):
+            logits[a] = float('-inf')
     return logits
 
 

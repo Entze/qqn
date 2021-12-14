@@ -6,7 +6,7 @@ from pyro.poutine.runtime import effectful
 from torch import Tensor
 
 from qqn.library.action import nr_of_actions_eff
-from qqn.library.common import nothing, snd
+from qqn.library.common import nothing, snd, fst
 from qqn.library.option import option_generator_eff, option_rater_eff, option_selector_eff, option_map_estimator_eff, \
     option_collapser_eff
 import pyro.distributions as dist
@@ -34,6 +34,7 @@ def policy_posterior_default(state):
     ratings = option_rater_eff(state, estimations)
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
         assert isinstance(ratings, list)
+        ratings.sort(key=fst)
         return torch.tensor(list(map(snd, ratings)))
     elif any(isinstance(ratings, t) for t in (list, tuple, Tensor)):
         return torch.as_tensor(ratings)

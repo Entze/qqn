@@ -11,7 +11,8 @@ def state_embedding_eff(state):
     return _state_embedding_eff(*args)
 
 
-_state_key_eff = effectful(hash, type='state_key')
+state_key_type = 'state_key'
+_state_key_eff = effectful(str, type=state_key_type) # TODO: implement own effect stack
 
 
 def state_key_eff(state):
@@ -19,7 +20,8 @@ def state_key_eff(state):
     return _state_key_eff(*args)
 
 
-_state_resource_eff = effectful(fst_default, type='state_resource')
+state_resource_type = 'state_resource'
+_state_resource_eff = effectful(fst_default, type=state_resource_type)
 
 
 def state_resource_eff(state):
@@ -27,12 +29,13 @@ def state_resource_eff(state):
     return _state_resource_eff(*args)
 
 
-_resource_left_eff = effectful(le_zero, type='resource_left')
+resource_depleted_type = 'resource_depleted'
+_resource_depleted_eff = effectful(le_zero, type=resource_depleted_type)
 
 
 def resource_depleted_eff(resource):
     args = (resource,)
-    return _resource_left_eff(*args)
+    return _resource_depleted_eff(*args)
 
 
 state_isfinal_type = 'state_isfinal'

@@ -5,6 +5,7 @@ from typing import Callable
 import pyro
 import pyro.infer
 import pyro.distributions as dist
+import torch
 from pyro import poutine
 from pyro.poutine.messenger import Messenger
 
@@ -35,6 +36,8 @@ class LearningAgentMessenger(Messenger):
         if key in self.lru_cache:
             self.lru_cache_accesses[key] += 1
         else:
+            self.lru_cache[key] = {}
+            posterior = pyro.param(f"p_preferences_{key}", action_prior_eff(state))
             optim, marginal, posterior = self._optimize(state)
             self.lru_cache[key]['optim'] = optim
             self.lru_cache[key]['marginal'] = marginal
@@ -69,7 +72,7 @@ class LearningAgentMessenger(Messenger):
     def _model(self, state):
         prior = action_prior_eff(state)
         action_idx = pyro.sample("p_action_idx", dist.Categorical(logits=prior))
-        with poutine.block():
+        with poutine.block(hide=["p_action_idx"]):
             action_value = option_estimator_eff(state, action_idx, max_depth=self.max_estimation_depth)
 
         if isinstance(self.alpha, Number):
@@ -99,10 +102,13 @@ class LearningAgentMessenger(Messenger):
 class SamplingAgentMessenger(LearningAgentMessenger):
 
     def _optimize(self, state):
-        importance = pyro.infer.Importance(model=self._model, num_samples=self.optimization_steps)
+        importance = pyro.infer.Importance(model=self._model, guide=self._guide, num_samples=self.optimization_steps)
         importance.run(state)
         marginal = pyro.infer.EmpiricalMarginal(importance)
-        return None, marginal, marginal.log_prob(self.all_actions)
+        logits = torch.clone(self.all_actions)
+        for a in logits:
+            logits[a] = marginal.log_prob(a)
+        return None, marginal, logits.float()
 
 
 class SVIAgentMessenger(LearningAgentMessenger):

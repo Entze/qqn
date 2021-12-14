@@ -42,14 +42,14 @@ def option_estimator_default(state, option, depth=0, max_depth=None):
     next_state = transition_eff(state, option)
     primary = state_value_eff(next_state)
     if state_isfinal_eff(next_state):
-        return primary
+        return primary.float()
     if max_depth is not None and depth >= max_depth:
         return primary + option_heuristic_eff(next_state)
     options = option_generator_eff(next_state)
     estimations = option_map_estimator_eff(next_state, options, depth + 1, max_depth)
     ratings = option_rater_eff(next_state, estimations)
     secondary = option_collapser_eff(next_state, ratings)
-    return primary + secondary
+    return (primary + secondary).float()
 
 
 option_estimator_type = 'option_estimator'

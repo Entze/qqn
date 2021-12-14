@@ -8,7 +8,7 @@ from qqn.library.SoftmaxAgentMessenger import softmax_agent
 from qqn.library.action import nr_of_actions_type
 from qqn.library.policy import policy_eff, policy_posterior_eff
 from qqn.library.simulate import simulate_by_sampling
-from qqn.library.state import StateValueFunctionMessenger
+from qqn.library.state import StateValueFunctionMessenger, state_key_type
 from qqn.library.transition import TransitionFunctionMessenger
 
 
@@ -23,6 +23,7 @@ def concrete_state_value_function(state):
 transition = lambda: TransitionFunctionMessenger(concrete_transition_function)
 state_value = lambda: StateValueFunctionMessenger(concrete_state_value_function)
 nr_of_actions = lambda: SetValueMessenger(nr_of_actions_type, 2)
+state_key = lambda: SetValueMessenger(state_key_type, str)
 
 with nr_of_actions(), transition(), state_value():
     print(simulate_by_sampling(tensor([1, 0])))
@@ -33,7 +34,7 @@ with nr_of_actions(), transition(), state_value(), softmax_agent():
     print(policy_eff(tensor([1, 0])))
     print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
 
-with nr_of_actions(), state_value(), transition(), softmax_agent(), SamplingAgentMessenger():
+with nr_of_actions(), state_key(), state_value(), transition(), softmax_agent(), SamplingAgentMessenger(alpha=2.0):
     print(simulate_by_sampling(tensor([1, 0])))
     print(policy_eff(tensor([1, 0])))
     print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
