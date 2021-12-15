@@ -9,7 +9,7 @@ from pyro.optim import Adam
 import torch
 from torch import tensor, Tensor
 from tqdm import trange
-import qqn.exploration.gridworld as gw
+import qqn.initial_exploration.gridworld as gw
 
 cache = {}
 

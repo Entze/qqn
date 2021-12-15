@@ -4,7 +4,7 @@ import pyro.infer
 import pyro.distributions as dist
 import torch
 from torch import tensor
-from qqn.exploration.webppl import expectation
+from qqn.initial_exploration.webppl import expectation
 
 states = [0, 1, 2, 3]
 

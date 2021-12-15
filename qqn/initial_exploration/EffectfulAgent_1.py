@@ -8,7 +8,7 @@ import torch
 from pyro.poutine.messenger import Messenger
 from pyro.poutine.runtime import effectful
 from torch import tensor, Tensor
-import qqn.exploration.gridworld as gw
+import qqn.initial_exploration.gridworld as gw
 
 cache = {}
 

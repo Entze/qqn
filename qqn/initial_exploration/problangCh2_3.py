@@ -3,7 +3,7 @@ import pyro.distributions as dist
 # total number of apples (known by speaker and listener)
 from torch import tensor
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 total_apples = 3
 

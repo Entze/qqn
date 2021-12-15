@@ -1,12 +1,12 @@
 from collections import defaultdict
 
 import torch
-from torch import tensor, Tensor
+from torch import tensor
 import pyro
 import pyro.infer
 import pyro.distributions as dist
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 rsa_cache = dict(literal_listener={}, literal_speaker={}, pragmatic_listener={}, discrete_beta={})
 
@@ -45,7 +45,8 @@ all_kinds_dist = dist.Categorical(logits=torch.zeros(len(all_kinds)))
 all_kinds_prevalence = defaultdict(float, dict(
     bird=0.5,
     reptile=0.2
-))
+)
+                                   )
 
 
 def prevalence_prior():
@@ -62,30 +63,14 @@ def condition(name: str, val: bool = False):
 print(prevalence_prior())
 
 
-def threshold_prior():
-    sample_t = dist.Categorical(logits=torch.zeros(len(bins))).sample()
-    return bins[int(sample_t.item())]
-
-
-utterances = ['generic', 'silence']
-
-
-def meaning(utt_t, prevalence: Tensor, threshold: Tensor):
-    utt = utterances[int(utt_t.item())]
-    if utt == 'generic':
-        return torch.all(prevalence > threshold)
-    return True
-
-
 def literal_listener(utt, num_samples=10):
     if utt not in rsa_cache["literal_listener"]:
         rsa_cache["literal_listener"][utt] = {}
 
         def model():
             prevalence = prevalence_prior()
-            threshold = threshold_prior()
-            m = meaning(utt, prevalence, threshold)
-            condition("lit_cond", m)
+            theta = dist.Uniform(0, 1).sample()
+            condition((prevalence > theta).item())
             return prevalence
 
         importance = pyro.infer.Importance(model, num_samples=num_samples)
@@ -145,16 +130,4 @@ def prior_model(**kwargs):
     return marginal
 
 
-#
-# viz(prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000))
-#
-# lit_lis = literal_listener(tensor(0.0), num_samples=100)
-#
-# viz(lit_lis)
-
-cost = {
-    tensor(0.): 1,
-    tensor(1.): 1,
-}
-
-
+viz(prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000))

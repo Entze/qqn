@@ -5,7 +5,7 @@ from pyroapi import pyro
 import pyro.infer
 import pyro.distributions as dist
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 actions = OrderedDict(a1=0, a2=1, a3=0)
 

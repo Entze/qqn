@@ -5,7 +5,7 @@ import pyro.distributions as dist
 import torch
 from torch import tensor, Tensor
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 torch.manual_seed(0)
 pyro.set_rng_seed(0)

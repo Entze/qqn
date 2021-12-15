@@ -8,7 +8,7 @@ from torch import tensor
 # fold:
 from itertools import combinations, chain
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 
 def powerset(iterable):

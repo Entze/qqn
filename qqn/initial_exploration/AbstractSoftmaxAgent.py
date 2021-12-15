@@ -9,7 +9,7 @@ import torch
 
 import pyro.distributions as dist
 
-from qqn.exploration.AbstractAgent import optimize_agent_preferences, print_preferences
+from qqn.initial_exploration.AbstractAgent import optimize_agent_preferences, print_preferences
 
 
 def softmax_agent(state, *args, **kwargs):

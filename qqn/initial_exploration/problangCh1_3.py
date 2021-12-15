@@ -7,7 +7,7 @@ import pyro.infer
 import pyro.distributions as dist
 from torch import tensor
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 colors = OrderedDict(blue=0, green=1, red=2)
 shapes = OrderedDict(square=0, circle=1, triangle=2)

@@ -1,7 +1,7 @@
 import pyro.distributions as dist
 from torch import tensor
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 
 def alt_beta(g, d):

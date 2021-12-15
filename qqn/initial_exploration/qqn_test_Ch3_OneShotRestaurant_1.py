@@ -2,7 +2,7 @@ import torch
 from torch import tensor
 from torch.distributions.utils import logits_to_probs
 
-from qqn.exploration.LearningAgentMessenger import SamplingAgentMessenger
+from qqn.initial_exploration.LearningAgentMessenger import SamplingAgentMessenger
 from qqn.library.setvalue_messenger import SetValueMessenger
 from qqn.library.softmaxagent_messenger import softmax_agent
 from qqn.library.action import nr_of_actions_type

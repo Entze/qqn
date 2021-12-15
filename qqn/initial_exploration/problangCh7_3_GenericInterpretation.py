@@ -1,12 +1,12 @@
 from collections import defaultdict
 
 import torch
-from torch import tensor
+from torch import tensor, Tensor
 import pyro
 import pyro.infer
 import pyro.distributions as dist
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 rsa_cache = dict(literal_listener={}, literal_speaker={}, pragmatic_listener={}, discrete_beta={})
 
@@ -45,8 +45,7 @@ all_kinds_dist = dist.Categorical(logits=torch.zeros(len(all_kinds)))
 all_kinds_prevalence = defaultdict(float, dict(
     bird=0.5,
     reptile=0.2
-)
-                                   )
+))
 
 
 def prevalence_prior():
@@ -63,22 +62,33 @@ def condition(name: str, val: bool = False):
 print(prevalence_prior())
 
 
-def literal_listener(utt, num_samples=10):
-    if utt not in rsa_cache["literal_listener"]:
-        rsa_cache["literal_listener"][utt] = {}
+def threshold_prior():
+    sample_t = dist.Categorical(logits=torch.zeros(len(bins))).sample()
+    return bins[int(sample_t.item())]
 
-        def model():
-            prevalence = prevalence_prior()
-            theta = dist.Uniform(0, 1).sample()
-            condition((prevalence > theta).item())
-            return prevalence
 
-        importance = pyro.infer.Importance(model, num_samples=num_samples)
-        importance.run()
-        marginal = pyro.infer.EmpiricalMarginal(importance)
-        rsa_cache["literal_listener"][utt] = marginal
+utterances = ['generic', 'silence']
 
-    return rsa_cache["literal_listener"][utt]
+
+def meaning(utt_t, prevalence: Tensor, threshold: Tensor):
+    utt = utterances[int(utt_t.item())]
+    if utt == 'generic':
+        return torch.all(prevalence > threshold)
+    return True
+
+
+def literal_listener(utt, state_prior, num_samples=10):
+    def model():
+        prevalence = state_prior.sample()
+        threshold = threshold_prior()
+        m = meaning(utt, prevalence, threshold)
+        condition("lit_cond", m)
+        return prevalence
+
+    importance = pyro.infer.Importance(model, num_samples=num_samples)
+    importance.run()
+    marginal = pyro.infer.EmpiricalMarginal(importance)
+    return marginal
 
 
 bins = list(map(lambda x:
@@ -130,4 +140,43 @@ def prior_model(**kwargs):
     return marginal
 
 
-viz(prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000))
+prior = prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000)
+
+#
+# viz(prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000))
+#
+# lit_lis = literal_listener(tensor(0.0), num_samples=100)
+#
+# viz(lit_lis)
+
+
+
+def utterance_prior():
+    sample_t = dist.Categorical(logits=torch.zeros(len(utterances))).sample()
+    return sample_t
+
+
+def literal_speaker(prevalence, state_prior, alpha=1., num_samples=10):
+    def model():
+        utterance = utterance_prior()
+        alpha_t = tensor(alpha).float()
+        lit_lis = literal_listener(utterance, state_prior, num_samples=num_samples)
+        state_prob = lit_lis.log_prob(prevalence)
+        pyro.factor("speak_factor", alpha_t * (state_prob - 1))
+        return utterance
+
+    importance = pyro.infer.Importance(model, num_samples=num_samples)
+    importance.run()
+    marginal = pyro.infer.EmpiricalMarginal(importance)
+    return marginal
+
+
+viz(prior)
+
+speak = literal_speaker(tensor(0.03), prior, num_samples=100)
+
+print(speak.sample())
+print(speak.sample())
+print(speak.sample())
+
+viz(speak)

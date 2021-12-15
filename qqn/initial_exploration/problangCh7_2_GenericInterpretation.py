@@ -6,7 +6,7 @@ import pyro
 import pyro.infer
 import pyro.distributions as dist
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 rsa_cache = dict(literal_listener={}, literal_speaker={}, pragmatic_listener={}, discrete_beta={})
 
@@ -77,18 +77,23 @@ def meaning(utt_t, prevalence: Tensor, threshold: Tensor):
     return True
 
 
-def literal_listener(utt, state_prior, num_samples=10):
-    def model():
-        prevalence = state_prior.sample()
-        threshold = threshold_prior()
-        m = meaning(utt, prevalence, threshold)
-        condition("lit_cond", m)
-        return prevalence
+def literal_listener(utt, num_samples=10):
+    if utt not in rsa_cache["literal_listener"]:
+        rsa_cache["literal_listener"][utt] = {}
 
-    importance = pyro.infer.Importance(model, num_samples=num_samples)
-    importance.run()
-    marginal = pyro.infer.EmpiricalMarginal(importance)
-    return marginal
+        def model():
+            prevalence = prevalence_prior()
+            threshold = threshold_prior()
+            m = meaning(utt, prevalence, threshold)
+            condition("lit_cond", m)
+            return prevalence
+
+        importance = pyro.infer.Importance(model, num_samples=num_samples)
+        importance.run()
+        marginal = pyro.infer.EmpiricalMarginal(importance)
+        rsa_cache["literal_listener"][utt] = marginal
+
+    return rsa_cache["literal_listener"][utt]
 
 
 bins = list(map(lambda x:
@@ -140,8 +145,6 @@ def prior_model(**kwargs):
     return marginal
 
 
-prior = prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000)
-
 #
 # viz(prior_model(potential=0.3, prevalence_when_present=0.5, concentration_when_present=10, num_samples=10_000))
 #
@@ -149,34 +152,9 @@ prior = prior_model(potential=0.3, prevalence_when_present=0.5, concentration_wh
 #
 # viz(lit_lis)
 
+cost = {
+    tensor(0.): 1,
+    tensor(1.): 1,
+}
 
 
-def utterance_prior():
-    sample_t = dist.Categorical(logits=torch.zeros(len(utterances))).sample()
-    return sample_t
-
-
-def literal_speaker(prevalence, state_prior, alpha=1., num_samples=10):
-    def model():
-        utterance = utterance_prior()
-        alpha_t = tensor(alpha).float()
-        lit_lis = literal_listener(utterance, state_prior, num_samples=num_samples)
-        state_prob = lit_lis.log_prob(prevalence)
-        pyro.factor("speak_factor", alpha_t * (state_prob - 1))
-        return utterance
-
-    importance = pyro.infer.Importance(model, num_samples=num_samples)
-    importance.run()
-    marginal = pyro.infer.EmpiricalMarginal(importance)
-    return marginal
-
-
-viz(prior)
-
-speak = literal_speaker(tensor(0.03), prior, num_samples=100)
-
-print(speak.sample())
-print(speak.sample())
-print(speak.sample())
-
-viz(speak)

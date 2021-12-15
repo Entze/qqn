@@ -3,7 +3,7 @@ import pyro
 import pyro.distributions as dist
 import torch
 from torch import tensor
-from qqn.exploration.webppl import expectation
+from qqn.initial_exploration.webppl import expectation
 
 states = [1, 2, 3, 4, 5]
 utterances = ["terrible", "bad", "okay", "good", "amazing"]

@@ -4,7 +4,7 @@ from typing import Dict, Union, Tuple, Optional
 
 from effect import sync_perform, Effect, sync_performer, TypeDispatcher
 
-from qqn.exploration.ScopedTypeDispatcher import ScopedTypeDispatcher
+from qqn.initial_exploration.ScopedTypeDispatcher import ScopedTypeDispatcher
 
 
 class ViewIntent(object):

@@ -5,7 +5,7 @@ from pyroapi import pyro
 import torch.distributions as torchdist
 from torch import tensor
 
-from qqn.exploration.RSA_POC3 import knockout
+from qqn.initial_exploration.RSA_POC3 import knockout
 
 cache = {
     "literal_listener": {

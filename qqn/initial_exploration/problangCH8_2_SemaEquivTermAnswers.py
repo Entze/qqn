@@ -8,7 +8,7 @@ from torch import tensor
 # fold:
 from itertools import combinations, chain
 
-from qqn.exploration.webppl import viz
+from qqn.initial_exploration.webppl import viz
 
 
 def powerset(iterable):
@@ -40,6 +40,7 @@ def belief_state_prior(speaker_knowledgeability_level):
     # eigentlich return categorical({vs: belief_states, ps: weights})
 
 
+var
 utterances = [
     'Anne',
     'Bob',
@@ -88,21 +89,13 @@ def utterance_prior(num_samples=10):
     return marginal
 
 
-lexica = [{"Anne": "only Anne", "Bob": "only Bob"},
-          {"Anne": "Anne or more", "Bob": "Bob or more"}]
-
-
-def lexicon_prior():
-    return dist.Categorical(logits=tensor(len(lexica))).sample()
-
-
-def utterance_meaning(utterance_t, lexicon):  # why? belief_state?
+def utterance_meaning(utterance_t, belief_state):  # why? belief_state?
     utterance = tensor_to_utterance(utterance_t)
     basic_meaning = {
-        "Anne": ["A"] if lexicon["Anne"] == "only Anne" else ["A", "AB"],
-        "Bob": ["B"] if lexicon["Bob"] == "only Bob" else ["B", "AB"],
+        "Anne": ["A", "AB"],
+        "Bob": ["B", "AB"],
         "both": ["AB"],
-        "Anne or Bob": ["A", "B"] if lexicon["Anne"] == "only Anne" and lexicon["Bob"] == "only Bob" else worlds,
+        "Anne or Bob": worlds,
         "Anne or both": ["A", "AB"],
         "Bob or both": ["B", "AB"],
         'Anne or Bob or both': worlds
@@ -121,21 +114,24 @@ def literal_listener(utterance, lexicon, num_samples=10):
     return marginal
 
 
-def utility(belief_state, utterance, lexicon):
-    scores = [literal_listener(utterance, lexicon).log_prob(bs) for bs in belief_state]
+print("L0's belief after hearing that 'Anne' came to the party")
+# viz.hist(literal_listener("Anne"))
+print("L0's belief after hearing that 'Anne or Bob' came to the party")
+
+
+# viz.hist(literal_listener("Anne or Bob"))
+
+
+def utility(belief_state, utterance):
+    scores = [literal_listener(utterance).log_prob(bs) for bs in belief_state]
     return 1 / len(belief_state) * sum(scores)
 
 
-def speaker(belief_state, lexicon, alpha=1., num_samples=10):
+def literal_speaker(belief_state, alpha=1., num_samples=10):
     def model():
         utterance = utterance_prior().sample()
-        lit_lis = literal_listener(utterance, lexicon)
-        # for what do we need the lit_lis
-
-        util = utility(belief_state, utterance, lexicon)
         alpha_t = tensor(alpha).float()
-
-        # this factor might miss the lit_lis:
+        util = utility(belief_state, utterance)
         pyro.factor("speak_factor", alpha_t * util)
         return utterance
 
@@ -152,11 +148,10 @@ def listener(utterance):
     def model():
         knowledgeability = knowledgeability_level_prior()
         # felher auf der website ?: knowledgeability_level_prior(speaker_knowledgeability_states)
-        lexicon = lexicon_prior()
         belief_state = belief_state_prior(knowledgeability)
-        speak = speaker(belief_state, lexicon)
+        lit_speak = literal_speaker(belief_state, knowledgeability)
         pyro.factor("speak_factor", lit_speak.log_prob(utterance))
-        return torch.stack(belief_state, lexicon)
+        return torch.stack(belief_state, knowledgeability)
 
     importance = pyro.infer.Importance(model, num_samples=num_samples)
     importance.run()

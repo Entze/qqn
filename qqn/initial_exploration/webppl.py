@@ -8,7 +8,7 @@ import pyro
 import pyro.distributions as dist
 import pyro.infer.mcmc
 
-from qqn.exploration.infer import EnumerateSearch, RejectionSampling, SingleSiteMH, HashingMarginal
+from qqn.initial_exploration.infer import EnumerateSearch, RejectionSampling, SingleSiteMH, HashingMarginal
 
 
 def maybe_tensor(v):

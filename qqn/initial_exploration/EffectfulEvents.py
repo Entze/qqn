@@ -3,8 +3,8 @@ from typing import Dict, Tuple, Union, Optional, Callable, TypeVar, Any
 
 from effect import Effect, sync_performer, TypeDispatcher, sync_perform, ComposedDispatcher
 
-from qqn.exploration.GraphMachine import setdictkey, proceed, anim_orientation
-from qqn.exploration.ScopedTypeDispatcher import ScopedTypeDispatcher
+from qqn.initial_exploration.GraphMachine import setdictkey, proceed, anim_orientation
+from qqn.initial_exploration.ScopedTypeDispatcher import ScopedTypeDispatcher
 
 example_state = {
     "id": 1,
