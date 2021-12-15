@@ -12,26 +12,26 @@ from qqn.library.action import action_generate_eff, action_rate_eff, action_sele
 import pyro.distributions as dist
 
 
-def policy_default(state):
+def policy_default(state, *args, **kwargs):
     options = action_generate_eff(state)
     estimations = action_map_estimate_eff(state, options)
-    ratings = action_rate_eff(state, estimations)
-    return action_select_eff(state, ratings)
+    ratings = action_rate_eff(estimations, state)
+    return action_select_eff(ratings, state)
 
 
 policy_type = 'policy'
 _policy_eff = effectful(policy_default, type=policy_type)
 
 
-def policy_eff(state):
-    args = (state,)
-    return _policy_eff(*args)
+def policy_eff(state, *args, **kwargs):
+    req_args = (state,)
+    return _policy_eff(*req_args, *args, **kwargs)
 
 
-def policy_posterior_default(state):
-    options = action_generate_eff(state)
-    estimations = action_map_estimate_eff(state, options)
-    ratings = action_rate_eff(state, estimations)
+def policy_posterior_default(state, *args, **kwargs):
+    options = action_generate_eff(state, *args, **kwargs)
+    estimations = action_map_estimate_eff(state, options, *args, **kwargs)
+    ratings = action_rate_eff(estimations, state, *args, **kwargs)
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
         assert isinstance(ratings, list)
         ratings.sort(key=fst)
@@ -48,9 +48,9 @@ policy_posterior_type = 'policy_posterior'
 _policy_posterior_eff = effectful(policy_posterior_default, type=policy_posterior_type)
 
 
-def policy_posterior_eff(state):
-    args = (state,)
-    return _policy_posterior_eff(*args)
+def policy_posterior_eff(state, *args, **kwargs):
+    req_args = (state,)
+    return _policy_posterior_eff(*req_args, *args, **kwargs)
 
 
 def policy_distribution_default(state):
@@ -61,6 +61,6 @@ policy_distribution_type = 'policy_posterior'
 _policy_distribution_eff = effectful(policy_distribution_default, type=policy_posterior_type)
 
 
-def policy_distribution_eff(state):
-    args = (state,)
-    return _policy_posterior_eff(*args)
+def policy_distribution_eff(state, *args, **kwargs):
+    req_args = (state,)
+    return _policy_posterior_eff(*req_args, *args, **kwargs)

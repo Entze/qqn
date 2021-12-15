@@ -18,7 +18,7 @@ class SoftmaxAgentMessenger(Messenger):
     def _process_message(self, msg):
         if msg['type'] == action_select_type:
             args = msg['args']
-            estimations = args[1]
+            estimations = args[0]
             value = msg['value']
             if isinstance(estimations, Tensor):
                 value = pyro.sample("action_selection", dist.Categorical(logits=estimations))

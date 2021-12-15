@@ -148,7 +148,9 @@ def action_map_estimate_eff(state, options, depth=0, max_depth=None, *args, **kw
 
 
 def action_rate_default(estimations, *args, **kwargs):
-    return sorted(enumerate(estimations), key=snd, reverse=True)
+    ratings_unsorted = enumerate(estimations)
+    ratings = sorted(ratings_unsorted, key=snd, reverse=True)
+    return ratings
 
 
 action_rate_type = 'option_rater'
