@@ -11,12 +11,11 @@ def _context_wrap(context, fn, *args, **kwargs):
         return fn(*args, **kwargs)
 
 
-class _bound_partial(partial):
+class _BoundPartial(partial):
     """
     Converts a (possibly) bound method into a partial function to
     support class methods as arguments to handlers.
     """
-
     def __get__(self, instance, owner):
         if instance is None:
             return self
@@ -26,13 +25,12 @@ class _bound_partial(partial):
 class Messenger:
     """
     Context manager class that modifies behavior
-    and adds side effects to stochastic functions
-    i.e. callables containing Pyro primitive statements.
+    and adds side effects to functions.
 
     This is the base Messenger class.
     It implements the default behavior for all Pyro primitives,
-    so that the joint distribution induced by a stochastic function fn
-    is identical to the joint distribution induced by ``Messenger()(fn)``.
+    so that the joint distribution induced by a function fn is
+     identical to the joint distribution induced by ``Messenger()(fn)``.
 
     Class of transformers for messages passed during inference.
     Most inference operations are implemented in subclasses of this.
@@ -48,13 +46,13 @@ class Messenger:
                     fn
                 )
             )
-        wraps = _bound_partial(partial(_context_wrap, self, fn))
+        wraps = _BoundPartial(partial(_context_wrap, self, fn))
         return wraps
 
     def __enter__(self):
         """
         :returns: self
-        :rtype: pyro.poutine.Messenger
+        :rtype: qqn.effect.Messenger
 
         Installs this messenger at the bottom of the Pyro stack.
 
@@ -66,7 +64,7 @@ class Messenger:
         and must always return self.
         """
         if not (self in _QQN_STACK):
-            # if this poutine is not already installed,
+            # if this handler is not already installed,
             # put it on the bottom of the stack.
             _QQN_STACK.append(self)
 
@@ -74,9 +72,9 @@ class Messenger:
             # is bound to VAR in with EXPR as VAR.
             return self
         else:
-            # note: currently we raise an error if trying to install a poutine twice.
+            # note: currently we raise an error if trying to install a handler twice.
             # However, this isn't strictly necessary,
-            # and blocks recursive poutine execution patterns like
+            # and blocks recursive handler execution patterns like
             # like calling self.__call__ inside of self.__call__
             # or with Handler(...) as p: with p: <BLOCK>
             # It's hard to imagine use cases for this pattern,
@@ -108,7 +106,7 @@ class Messenger:
         """
         if exc_type is None:  # callee or enclosed block returned successfully
             # if the callee or enclosed block returned successfully,
-            # this poutine should be on the bottom of the stack.
+            # this handler should be on the bottom of the stack.
             # If so, remove it from the stack.
             # if not, raise a ValueError because something really weird happened.
             if _QQN_STACK[-1] == self:
@@ -117,9 +115,9 @@ class Messenger:
                 # should never get here, but just in case...
                 raise ValueError("This Messenger is not on the bottom of the stack")
         else:  # the wrapped function or block raised an exception
-            # poutine exception handling:
+            # handler exception handling:
             # when the callee or enclosed block raises an exception,
-            # find this poutine's position in the stack,
+            # find this handler's position in the stack,
             # then remove it and everything below it in the stack.
             if self in _QQN_STACK:
                 loc = _QQN_STACK.index(self)
@@ -137,13 +135,13 @@ class Messenger:
         Process the message by calling appropriate method of itself based
         on message type. The message is updated in place.
         """
-        method = getattr(self, "_pyro_{}".format(msg["type"]), None)
+        method = getattr(self, "_qqn_{}".format(msg["type"]), None)
         if method is not None:
             return method(msg)
         return None
 
     def postprocess_message(self, msg):
-        method = getattr(self, "_pyro_post_{}".format(msg["type"]), None)
+        method = getattr(self, "_qqn_post_{}".format(msg["type"]), None)
         if method is not None:
             return method(msg)
         return None
@@ -153,7 +151,7 @@ class Messenger:
         """
         :param fn: function implementing operation
         :param str type: name of the operation
-            (also passed to :func:`~pyro.poutine.runtime.effectful`)
+            (also passed to :func:`~qqn.effect.effectful`)
         :param bool post: if `True`, use this operation as postprocess
 
         Dynamically add operations to an effect.
@@ -173,7 +171,7 @@ class Messenger:
         if type is None:
             raise ValueError("An operation type name must be provided")
 
-        setattr(cls, "_pyro_" + ("post_" if post else "") + type, staticmethod(fn))
+        setattr(cls, "_qqn_" + ("post_" if post else "") + type, staticmethod(fn))
         return fn
 
     @classmethod
@@ -181,7 +179,7 @@ class Messenger:
         """
         :param fn: function implementing operation
         :param str type: name of the operation
-            (also passed to :func:`~pyro.poutine.runtime.effectful`)
+            (also passed to :func:`~qqn.effect.effectful`)
 
         Dynamically remove operations from an effect.
         Useful for removing wrappers from libraries.
@@ -194,12 +192,12 @@ class Messenger:
             raise ValueError("An operation type name must be provided")
 
         try:
-            delattr(cls, "_pyro_post_" + type)
+            delattr(cls, "_qqn_post_" + type)
         except AttributeError:
             pass
 
         try:
-            delattr(cls, "_pyro_" + type)
+            delattr(cls, "_qqn_" + type)
         except AttributeError:
             pass
 
@@ -253,7 +251,7 @@ def apply_stack(initial_msg):
 
 def am_i_wrapped():
     """
-    Checks whether the current computation is wrapped in a poutine.
+    Checks whether the current computation is wrapped in an messenger.
     :returns: bool
     """
     return len(_QQN_STACK) > 0
@@ -264,7 +262,7 @@ def effectful(fn=None, type=None):
     :param fn: function or callable that performs an effectful computation
     :param str type: the type label of the operation, e.g. `"sample"`
 
-    Wrapper for calling :func:`~pyro.poutine.runtime.apply_stack` to apply any active effects.
+    Wrapper for calling :func:`~qqn.effect.apply_stack` to apply any active effects.
     """
     if fn is None:
         return functools.partial(effectful, type=type)

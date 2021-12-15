@@ -1,7 +1,8 @@
 from numbers import Number
 
-from pyro.poutine.messenger import Messenger
 from torch import Tensor
+
+from qqn.library.effect import Messenger
 
 
 class SetValueMessenger(Messenger):
@@ -25,7 +26,7 @@ class SetValueMessenger(Messenger):
             return authority
         raise NotImplementedError
 
-    def _process_message(self, msg):
+    def process_message(self, msg):
         if msg['type'] == self.msg_type:
             args = msg['args']
             kwargs = msg['kwargs']

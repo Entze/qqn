@@ -56,7 +56,7 @@ state_key = SetValueMessenger(state_key_type, str)
 #     print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
 
 with nr_of_actions, state_key, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-        min_estimation_value=-10, max_estimation_value=8, optimization_steps=100):
+        min_estimation_value=-10, max_estimation_value=8, optimization_steps=10_000):
     print(simulate_by_sampling(tensor([1, 0])))
     print(policy_eff(tensor([1, 0])))
     print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))

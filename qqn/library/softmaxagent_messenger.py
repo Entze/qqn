@@ -3,11 +3,11 @@ from numbers import Number
 import pyro
 import pyro.distributions as dist
 from pyro.distributions import Distribution
-from pyro.poutine.messenger import Messenger
 from torch import Tensor, tensor
 
 from qqn.library.action import action_select_type
 from qqn.library.common import snd
+from qqn.library.effect import Messenger
 
 
 class SoftmaxAgentMessenger(Messenger):
@@ -15,7 +15,7 @@ class SoftmaxAgentMessenger(Messenger):
     def __init__(self, ):
         super().__init__()
 
-    def _process_message(self, msg):
+    def process_message(self, msg):
         if msg['type'] == action_select_type:
             args = msg['args']
             estimations = args[0]
