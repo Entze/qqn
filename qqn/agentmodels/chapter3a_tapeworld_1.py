@@ -2,7 +2,8 @@ import torch
 from torch import tensor
 from torch.distributions.utils import logits_to_probs
 
-from qqn.library.action import nr_of_actions_type
+from qqn.library.action import nr_of_actions_type, action_estimate_type
+from qqn.library.cacher import Cacher
 from qqn.library.estimator_messenger import SamplingEstimatingAgentMessenger
 from qqn.library.policy import policy_eff, policy_posterior_eff
 from qqn.library.setvalue_messenger import SetValueMessenger
@@ -48,7 +49,19 @@ with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimating
         min_estimation_value=0,
         max_estimation_value=2,
         nr_of_bins=21,
-        optimization_steps=5):
+        optimization_steps=2):
+    print(simulate_by_sampling(tensor([3, 0])))
+    print(policy_eff(tensor([3, 0])))
+    print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+
+print('#' * 80)
+print("Cached Softmax with sampling:")
+with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
+        min_estimation_value=0,
+        max_estimation_value=2,
+        nr_of_bins=21,
+        optimization_steps=1_000), \
+        Cacher(types=[action_estimate_type]):
     print(simulate_by_sampling(tensor([3, 0])))
     print(policy_eff(tensor([3, 0])))
     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))

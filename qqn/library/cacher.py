@@ -1,53 +1,60 @@
-class Cacher:
+from typing import Optional
 
-    def __init__(self, cache_max_size=None):
-        super()
-        self.cache_accesses = dict()
-        self.cache = dict()
-        self.cache_size = 0
-        self.cache_max_size = cache_max_size
-        self.least_accessed_trace = None
-        self.least_accessed_accesses = 0
+from cachetools import Cache, LFUCache, FIFOCache, LRUCache, MRUCache, RRCache
 
-    def learn(self, *args):
-        assert args, "Arguments of learn may not be empty."
-        pointer = 0
-        cache = self.cache
-        cache_accesses = self.cache_accesses
-        curr_arg = args[pointer]
-        curr_key = self._arg_to_key(curr_arg)
-        while len(args) < (pointer + 1):
-            if curr_key not in cache:
-                cache[curr_key] = {}
-                cache_accesses[curr_key] = {}
-            cache = cache[curr_key]
-            cache_accesses = cache_accesses[curr_key]
-            pointer += 1
-            curr_arg = args[pointer]
-            curr_key = self._arg_to_key(curr_arg)
+from qqn.library.common import to_key
+from qqn.library.effect import Messenger
 
-        if curr_key not in cache:
-            if self.__max_cache_size() <= self.cache_size + 1:
-                self.__demote_least_accessed()
-                self.cache_size -= 1
-            cache_accesses[curr_key] = 0
-            cache[curr_key] = self._learn(*args)
-            self.cache_size += 1
-            self.least_accessed_accesses = 1
-            self.least_accessed_trace = args
 
-        cache_accesses[curr_key] += 1
+class Cacher(Messenger):
 
-        return cache[curr_key]
+    def __init__(self, types='__ALL', ignore_types=None, maxsize=8192, method='LFU', cache: Optional[Cache] = None):
+        super().__init__()
 
-    def _arg_to_key(self, arg):
-        return hash(arg)
+        self.types = types
+        self.ignore_types = ignore_types
+        self.cache = cache
+        if self.cache is None:
+            if method == 'FIFO':
+                self.cache = FIFOCache(maxsize)
+            elif method == 'LRU':
+                self.cache = LRUCache(maxsize)
+            elif method == 'MRU':
+                self.cache = MRUCache(maxsize)
+            elif method == 'RR':
+                self.cache = RRCache(maxsize)
+            else:
+                self.cache = LFUCache(maxsize)
 
-    def _learn(self, *args):
-        raise NotImplementedError
+    def process_message(self, msg):
+        if not msg['done'] and self.types is not None and (self.types == '_ALL' or msg['type'] in self.types) and (
+                self.ignore_types is None or msg['type'] not in self.ignore_types):
+            key = self._msg_to_key(msg)
+            if key in self.cache:
+                msg['value'] = self.cache[key]
+                msg['done'] = True
 
-    def __max_cache_size(self):
-        return self.cache_max_size or (self.cache_size + 2)
+    def postprocess_message(self, msg):
+        if msg['done'] and self.types is not None and (self.types == '_ALL' or msg['type'] in self.types) and (
+                self.ignore_types is None or msg['type'] not in self.ignore_types):
+            key = self._msg_to_key(msg)
+            if key not in self.cache:
+                self.cache[key] = msg['value']
+            elif self.cache[key] != msg['value']:
+                self.cache[key] = msg['value']
 
-    def __demote_least_accessed(self):
-        pass
+    def _msg_to_key(self, msg):
+        key = hash(msg['type'])
+        key = self._args_to_key(msg['args'], key)
+        key = self._kwargs_to_key(msg['kwargs'], key)
+        return key
+
+    def _args_to_key(self, args, key=0):
+        for arg in args:
+            key = hash((key, to_key(arg)))
+        return key
+
+    def _kwargs_to_key(self, kwargs, key=0):
+        for k, v in sorted(kwargs.items()):
+            key = hash((key, (k, v)))
+        return key

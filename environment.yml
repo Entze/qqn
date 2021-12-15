@@ -11,6 +11,7 @@ dependencies:
   - matplotlib~=3.5.0
   - six~=1.16
   - seaborn~=0.11.2
+  - cachetools~=4.2.4
   - pip>=21.3.1
   - pip:
       - effect~=1.1.0

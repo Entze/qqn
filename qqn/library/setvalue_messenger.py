@@ -27,8 +27,8 @@ class SetValueMessenger(Messenger):
         raise NotImplementedError
 
     def process_message(self, msg):
-        if msg['type'] == self.msg_type:
+        if not msg["done"] and msg["value"] is None and msg['type'] == self.msg_type:
             args = msg['args']
             kwargs = msg['kwargs']
             msg['value'] = self._access(*args, **kwargs)
-        return None
+            msg['done'] = True

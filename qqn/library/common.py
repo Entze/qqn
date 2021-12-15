@@ -1,5 +1,9 @@
 from typing import Iterator
 
+from frozendict import frozendict
+from frozenlist import FrozenList
+from torch import Tensor
+
 
 def nothing(*args, **kwargs):
     return None
@@ -59,3 +63,24 @@ def func_composition(f, g):
         return g(f(val))
 
     return com
+
+
+def to_key(val):
+    hashable_val = val
+    if isinstance(val, Tensor):
+        hashable_val = str(val)
+    elif isinstance(val, list) and not isinstance(val, FrozenList):
+        hashable_val = FrozenList(val)
+        hashable_val.freeze()
+    elif isinstance(val, set) and not isinstance(val, frozenset):
+        hashable_val = frozenset(val)
+    elif isinstance(val, dict) and not isinstance(val, frozendict):
+        hashable_val = frozendict(val)
+
+    if hasattr(hashable_val, "__hash__"):
+        try:
+            return hash(hashable_val)
+        except TypeError:
+            pass
+
+    return hash(str(val))
