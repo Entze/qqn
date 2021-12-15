@@ -1,16 +1,16 @@
 import pyro.distributions as dist
 import torch
-from pyro.poutine.runtime import effectful
 from torch import Tensor
 
 from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff
 from qqn.library.action import nr_of_actions_eff
 from qqn.library.common import snd, fst
+from qqn.library.effect import effectful
 
 
 def policy_default(state, *args, **kwargs):
     options = action_generate_eff(state, *args, **kwargs)
-    estimations = action_map_estimate_eff(state, options, *args, **kwargs)
+    estimations = action_map_estimate_eff(options, state, *args, **kwargs)
     ratings = action_rate_eff(estimations, state, *args, **kwargs)
     return action_select_eff(ratings, state, *args, **kwargs)
 
