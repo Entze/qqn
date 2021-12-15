@@ -43,7 +43,7 @@ with oneshot, nr_of_actions, transition, state_value:
 print('#' * 80)
 print("Softmax:")
 with oneshot, nr_of_actions, transition, state_value, softmax_agent():
-    print(simulate_by_sampling('intial_state'))
+    print(simulate_by_sampling('initial_state'))
     print(policy_eff(tensor([1, 0])))
     print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
 
