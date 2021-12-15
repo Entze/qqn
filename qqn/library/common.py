@@ -1,6 +1,4 @@
-from typing import Iterable, Iterator
-
-from torch import Tensor
+from typing import Iterator
 
 
 def nothing(*args, **kwargs):
@@ -28,10 +26,7 @@ def fst_default(coll, default=None):
         except IndexError:
             return default
     elif isinstance(coll, Iterator):
-        try:
-            return next(coll)
-        except StopIteration:
-            return default
+        return next(coll, default)
     return default
 
 
@@ -52,9 +47,9 @@ def le_zero(val):
     return val <= 0
 
 
-def const(*args, **kwargs):
+def const(val, *args, **kwargs):
     def ret(*_args, **_kwargs):
-        return args[0]
+        return val
 
     return ret
 

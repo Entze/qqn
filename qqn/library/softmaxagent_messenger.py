@@ -1,13 +1,13 @@
 from numbers import Number
 
 import pyro
+import pyro.distributions as dist
 from pyro.distributions import Distribution
 from pyro.poutine.messenger import Messenger
 from torch import Tensor, tensor
-import pyro.distributions as dist
 
-from qqn.library.common import snd
 from qqn.library.action import action_select_type
+from qqn.library.common import snd
 
 
 class SoftmaxAgentMessenger(Messenger):

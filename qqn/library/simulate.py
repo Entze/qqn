@@ -1,8 +1,7 @@
 from pyro.poutine.runtime import effectful
 
+from qqn.library.action import action_generate_eff, action_estimate_eff
 from qqn.library.common import nothing
-from qqn.library.action import action_generate_eff, action_estimate_eff, action_rate_eff, action_select_eff, \
-    action_map_estimate_eff
 from qqn.library.policy import policy_eff
 from qqn.library.state import state_isfinal_eff
 from qqn.library.transition import transition_eff

@@ -1,7 +1,7 @@
 from pyro.poutine.runtime import effectful
 
+from qqn.library.common import nothing, fst_default, func_composition, le_zero
 from qqn.library.setvalue_messenger import SetValueMessenger
-from qqn.library.common import nothing, fst_default, gt_zero, func_composition, le_zero
 
 _state_embedding_eff = effectful(nothing, type='state_embedding')
 
@@ -12,7 +12,7 @@ def state_embedding_eff(state):
 
 
 state_key_type = 'state_key'
-_state_key_eff = effectful(hash, type=state_key_type) # TODO: implement own effect stack
+_state_key_eff = effectful(hash, type=state_key_type)
 
 
 def state_key_eff(state):

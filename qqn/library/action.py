@@ -2,16 +2,15 @@ import math
 import random
 import statistics
 from numbers import Number
-from typing import Iterable, Iterator
+from typing import Iterator
 
 import pyro.distributions as dist
 import torch
 from pyro.distributions import Distribution
-from pyro.poutine.runtime import effectful
 from torch import tensor, Tensor
 
-from qqn.library.common import func_composition
 from qqn.library.common import snd, const
+from qqn.library.effect import effectful
 from qqn.library.state import state_isfinal_eff, state_value_eff
 from qqn.library.transition import transition_eff
 
@@ -77,7 +76,7 @@ def action_generate_default(*args, **kwargs):
     return tensor(range(nr_of_actions_eff(*args, **kwargs)))
 
 
-action_generate_type = 'option_generator'
+action_generate_type = 'action_generate'
 _action_generate_eff = effectful(action_generate_default, type=action_generate_type)
 
 
@@ -105,7 +104,7 @@ def action_estimate_default(action, state, depth=0, max_depth=None, *args, **kwa
     return (primary + secondary).float()
 
 
-action_estimate_type = 'option_estimator'
+action_estimate_type = 'action_estimate'
 _action_estimate_eff = effectful(action_estimate_default, type=action_estimate_type)
 
 
@@ -119,7 +118,7 @@ def action_estimate_eff(action, state, *args, **kwargs):
 ########################################################################################################################
 
 
-action_heuristic_type = 'option_heursitic'
+action_heuristic_type = 'action_heuristic'
 _action_heuristic_eff = effectful(const(tensor(0.)), type=action_heuristic_type)
 
 
@@ -136,7 +135,7 @@ def action_map_estimate_default(actions, state, *args, **kwargs):
     return torch.stack([action_estimate_eff(action, state, *args, **kwargs) for action in actions])
 
 
-action_map_estimate_type = 'option_map_estimator'
+action_map_estimate_type = 'action_map_estimate'
 _action_map_estimate_eff = effectful(action_map_estimate_default, type=action_map_estimate_type)
 
 
@@ -156,7 +155,7 @@ def action_rate_default(estimations, *args, **kwargs):
     return ratings
 
 
-action_rate_type = 'option_rater'
+action_rate_type = 'action_rate'
 _action_rate_eff = effectful(action_rate_default, type=action_rate_type)
 
 
@@ -184,7 +183,7 @@ def action_select_default(ratings, *args, **kwargs):
         f"Cannot select from ratings of type {type(ratings).__name__}, you have to write a messenger that processes {str(action_select_type)}")
 
 
-action_select_type = 'option_selector'
+action_select_type = 'action_select'
 _action_select_eff = effectful(action_select_default, type=action_select_type)
 
 
@@ -209,7 +208,7 @@ def action_collapse_default(ratings, *args, **kwargs):
     return tensor(0.)
 
 
-action_collapse_type = 'option_collapser'
+action_collapse_type = 'action_collapse'
 _action_collapse_eff = effectful(action_collapse_default, type=action_collapse_type)
 
 

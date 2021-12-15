@@ -1,5 +1,4 @@
 from numbers import Number
-from typing import Callable
 
 from pyro.poutine.messenger import Messenger
 from torch import Tensor
@@ -13,7 +12,7 @@ class SetValueMessenger(Messenger):
         self.authority = authority
 
     def _access(self, *args, **kwargs):
-        if isinstance(self.authority, Callable):
+        if callable(self.authority):
             return self.authority(*args, **kwargs)
         elif any(isinstance(self.authority, t) for t in (Number, str, Tensor)):
             return self.authority

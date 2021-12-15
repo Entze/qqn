@@ -1,15 +1,11 @@
-import math
-from numbers import Number
-
+import pyro.distributions as dist
 import torch
 from pyro.poutine.runtime import effectful
 from torch import Tensor
 
+from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff
 from qqn.library.action import nr_of_actions_eff
-from qqn.library.common import nothing, snd, fst
-from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff, \
-    action_collapse_eff
-import pyro.distributions as dist
+from qqn.library.common import snd, fst
 
 
 def policy_default(state, *args, **kwargs):

@@ -1,7 +1,7 @@
 from pyro.poutine.runtime import effectful
 
-from qqn.library.setvalue_messenger import SetValueMessenger
 from qqn.library.common import nothing
+from qqn.library.setvalue_messenger import SetValueMessenger
 
 transition_type = 'transition'
 _transition_eff = effectful(nothing, type=transition_type)
