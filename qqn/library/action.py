@@ -16,41 +16,43 @@ from qqn.library.state import state_isfinal_eff, state_value_eff
 from qqn.library.transition import transition_eff
 
 
-def all_actions_default():
-    return list(range(nr_of_actions_eff()))
+def all_actions_default(*args, **kwargs):
+    return list(range(nr_of_actions_eff(*args, **kwargs)))
 
 
 all_actions_type = 'all_actions'
 _all_actions_eff = effectful(all_actions_default, type=all_actions_type)
 
 
-def all_actions_eff():
-    args = ()
-    return _all_actions_eff(*args)
+def all_actions_eff(*args, **kwargs):
+    return _all_actions_eff(*args, **kwargs)
+
+
+def nr_of_actions_default(*args, **kwargs):
+    return len(all_actions_eff(*args, **kwargs))
 
 
 nr_of_actions_type = 'nr_of_actions'
-_nr_of_actions_eff = effectful(func_composition(all_actions_eff, len), type=nr_of_actions_type)
+_nr_of_actions_eff = effectful(nr_of_actions_default, type=nr_of_actions_type)
 
 
-def nr_of_actions_eff():
-    args = ()
-    return _nr_of_actions_eff(*args)
+def nr_of_actions_eff(*args, **kwargs):
+    return _nr_of_actions_eff(*args, **kwargs)
 
 
 action_islegal_type = 'action_islegal'
 _action_islegal_eff = effectful(const(True), type=action_islegal_type)
 
 
-def action_islegal_eff(state, action):
-    args = (state, action)
-    return _action_islegal_eff(*args)
+def action_islegal_eff(action, state, *args, **kwargs):
+    req_args = (action, state)
+    return _action_islegal_eff(*req_args, *args, **kwargs)
 
 
-def action_prior_default(state):
-    nr_of_actions = nr_of_actions_eff()
+def action_prior_default(state, *args, **kwargs):
+    nr_of_actions = nr_of_actions_eff(*args, **kwargs)
     logits = torch.zeros(nr_of_actions).float()
-    actions = all_actions_eff()
+    actions = all_actions_eff(*args, **kwargs)
 
     for a in actions:
         if not action_islegal_eff(state, a):
@@ -62,8 +64,9 @@ action_prior_type = 'action_prior'
 _action_prior_eff = effectful(action_prior_default, action_prior_type)
 
 
-def action_prior_eff(*args, **kwargs):
-    return _action_prior_eff(*args, **kwargs)
+def action_prior_eff(state, *args, **kwargs):
+    req_args = (state,)
+    return _action_prior_eff(*req_args, *args, **kwargs)
 
 
 ########################################################################################################################
@@ -71,7 +74,7 @@ def action_prior_eff(*args, **kwargs):
 ########################################################################################################################
 
 def action_generate_default(*args, **kwargs):
-    return tensor(range(nr_of_actions_eff()))
+    return tensor(range(nr_of_actions_eff(*args, **kwargs)))
 
 
 action_generate_type = 'option_generator'
@@ -86,17 +89,17 @@ def action_generate_eff(*args, **kwargs):
 # Estimator ############################################################################################################
 ########################################################################################################################
 
-def action_estimate_default(state, option, depth=0, max_depth=None, *args, **kwargs):
-    if not action_islegal_eff(state, option):
+def action_estimate_default(action, state, depth=0, max_depth=None, *args, **kwargs):
+    if not action_islegal_eff(state, action):
         return tensor(float('-inf'))
-    next_state = transition_eff(state, option)
+    next_state = transition_eff(state, action)
     primary = state_value_eff(next_state)
     if state_isfinal_eff(next_state):
         return primary.float()
     if max_depth is not None and depth >= max_depth:
         return primary + action_heuristic_eff(next_state)
-    options = action_generate_eff(next_state)
-    estimations = action_map_estimate_eff(next_state, options, depth + 1, max_depth, *args, **kwargs)
+    actions = action_generate_eff(next_state)
+    estimations = action_map_estimate_eff(actions, next_state, depth + 1, max_depth, *args, **kwargs)
     ratings = action_rate_eff(estimations, next_state, *args, **kwargs)
     secondary = action_collapse_eff(ratings, next_state, *args, **kwargs)
     return (primary + secondary).float()
@@ -106,8 +109,8 @@ action_estimate_type = 'option_estimator'
 _action_estimate_eff = effectful(action_estimate_default, type=action_estimate_type)
 
 
-def action_estimate_eff(state, option, depth=0, max_depth=None, *args, **kwargs):
-    req_args = (state, option, depth, max_depth)
+def action_estimate_eff(action, state, *args, **kwargs):
+    req_args = (action, state)
     return _action_estimate_eff(*req_args, *args, **kwargs)
 
 
@@ -129,16 +132,16 @@ def action_heuristic_eff(*args, **kwargs):
 ########################################################################################################################
 
 
-def action_map_estimate_default(state, options, depth=0, max_depth=None, *args, **kwargs):
-    return torch.stack([action_estimate_eff(state, option, depth, max_depth) for option in options])
+def action_map_estimate_default(actions, state, *args, **kwargs):
+    return torch.stack([action_estimate_eff(action, state, *args, **kwargs) for action in actions])
 
 
 action_map_estimate_type = 'option_map_estimator'
 _action_map_estimate_eff = effectful(action_map_estimate_default, type=action_map_estimate_type)
 
 
-def action_map_estimate_eff(state, options, depth=0, max_depth=None, *args, **kwargs):
-    req_args = (state, options, depth, max_depth)
+def action_map_estimate_eff(state, options, *args, **kwargs):
+    req_args = (state, options)
     return _action_map_estimate_eff(*req_args, *args, **kwargs)
 
 
@@ -177,7 +180,8 @@ def action_select_default(ratings, *args, **kwargs):
         return ratings.sample()
     elif isinstance(ratings, Tensor):
         return dist.Categorical(logits=ratings).sample()
-    return tensor(0)
+    raise NotImplementedError(
+        f"Cannot select from ratings of type {type(ratings).__name__}, you have to write a messenger that processes {str(action_select_type)}")
 
 
 action_select_type = 'option_selector'

@@ -13,10 +13,10 @@ import pyro.distributions as dist
 
 
 def policy_default(state, *args, **kwargs):
-    options = action_generate_eff(state)
-    estimations = action_map_estimate_eff(state, options)
-    ratings = action_rate_eff(estimations, state)
-    return action_select_eff(ratings, state)
+    options = action_generate_eff(state, *args, **kwargs)
+    estimations = action_map_estimate_eff(state, options, *args, **kwargs)
+    ratings = action_rate_eff(estimations, state, *args, **kwargs)
+    return action_select_eff(ratings, state, *args, **kwargs)
 
 
 policy_type = 'policy'
@@ -29,8 +29,8 @@ def policy_eff(state, *args, **kwargs):
 
 
 def policy_posterior_default(state, *args, **kwargs):
-    options = action_generate_eff(state, *args, **kwargs)
-    estimations = action_map_estimate_eff(state, options, *args, **kwargs)
+    actions = action_generate_eff(state, *args, **kwargs)
+    estimations = action_map_estimate_eff(actions, state, *args, **kwargs)
     ratings = action_rate_eff(estimations, state, *args, **kwargs)
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
         assert isinstance(ratings, list)
