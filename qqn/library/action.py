@@ -198,14 +198,22 @@ def action_select_eff(ratings, *args, **kwargs):
 
 
 def action_collapse_default(ratings, *args, **kwargs):
+
+    if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
+        if isinstance(ratings[0][1], Number):
+            assert isinstance(ratings, list)
+            it: Iterator = filter(math.isfinite, ratings)
+            return torch.as_tensor(statistics.mean(it))
+        elif isinstance(ratings[0][1], Tensor):
+            ratings = list(map(snd, ratings))
+            ratings = torch.stack(ratings)
+
     if isinstance(ratings, Tensor):
         ratings = ratings[torch.isfinite(ratings)]
         return torch.mean(ratings)
-    elif isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], Number):
-        assert isinstance(ratings, list)
-        it: Iterator = filter(math.isfinite, ratings)
-        return torch.as_tensor(statistics.mean(it))
-    return tensor(0.)
+
+    raise NotImplementedError(
+        f"Cannot select from ratings of type {type(ratings).__name__}, you have to write a messenger that processes {str(action_collapse_type)}")
 
 
 action_collapse_type = 'action_collapse'
