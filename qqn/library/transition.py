@@ -6,9 +6,9 @@ transition_type = 'transition'
 _transition_eff = effectful(nothing, type=transition_type)
 
 
-def transition_eff(state, action):
-    args = (state, action)
-    return _transition_eff(*args)
+def transition_eff(state, action, *args, **kwargs):
+    req_args = (state, action)
+    return _transition_eff(*req_args, *args, **kwargs)
 
 
 class BaseTransitionMessenger(SetValueMessenger):
