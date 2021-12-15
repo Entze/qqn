@@ -1,5 +1,3 @@
-from numbers import Number
-
 import torch
 from torch import tensor, Tensor
 
@@ -31,3 +29,9 @@ class NumberBin:
             return self.bins_list[bin]
         elif isinstance(bin, Tensor):
             return self.bins_tensor[bin]
+
+    def __repr__(self):
+        return f"[{self.min},..,{self.max}]@{self.nr_of_bins}"
+
+    def __str__(self):
+        return str(self.bins_list)

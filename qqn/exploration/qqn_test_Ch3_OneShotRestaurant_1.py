@@ -2,9 +2,9 @@ import torch
 from torch import tensor
 from torch.distributions.utils import logits_to_probs
 
-from qqn.library.LearningAgentMessenger import SamplingAgentMessenger
-from qqn.library.SetValueMessenger import SetValueMessenger
-from qqn.library.SoftmaxAgentMessenger import softmax_agent
+from qqn.exploration.LearningAgentMessenger import SamplingAgentMessenger
+from qqn.library.setvalue_messenger import SetValueMessenger
+from qqn.library.softmaxagent_messenger import softmax_agent
 from qqn.library.action import nr_of_actions_type
 from qqn.library.policy import policy_eff, policy_posterior_eff
 from qqn.library.simulate import simulate_by_sampling

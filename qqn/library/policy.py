@@ -7,16 +7,16 @@ from torch import Tensor
 
 from qqn.library.action import nr_of_actions_eff
 from qqn.library.common import nothing, snd, fst
-from qqn.library.option import option_generator_eff, option_rater_eff, option_selector_eff, option_map_estimator_eff, \
-    option_collapser_eff
+from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff, \
+    action_collapse_eff
 import pyro.distributions as dist
 
 
 def policy_default(state):
-    options = option_generator_eff(state)
-    estimations = option_map_estimator_eff(state, options)
-    ratings = option_rater_eff(state, estimations)
-    return option_selector_eff(state, ratings)
+    options = action_generate_eff(state)
+    estimations = action_map_estimate_eff(state, options)
+    ratings = action_rate_eff(state, estimations)
+    return action_select_eff(state, ratings)
 
 
 policy_type = 'policy'
@@ -29,15 +29,17 @@ def policy_eff(state):
 
 
 def policy_posterior_default(state):
-    options = option_generator_eff(state)
-    estimations = option_map_estimator_eff(state, options)
-    ratings = option_rater_eff(state, estimations)
+    options = action_generate_eff(state)
+    estimations = action_map_estimate_eff(state, options)
+    ratings = action_rate_eff(state, estimations)
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
         assert isinstance(ratings, list)
         ratings.sort(key=fst)
         return torch.tensor(list(map(snd, ratings)))
     elif any(isinstance(ratings, t) for t in (list, tuple, Tensor)):
         return torch.as_tensor(ratings)
+    elif isinstance(ratings, dist.Categorical):
+        return ratings.logits
 
     return torch.zeros(nr_of_actions_eff())
 

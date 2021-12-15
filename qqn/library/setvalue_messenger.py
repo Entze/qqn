@@ -17,7 +17,13 @@ class SetValueMessenger(Messenger):
             return self.authority(*args, **kwargs)
         elif any(isinstance(self.authority, t) for t in (Number, str, Tensor)):
             return self.authority
-        # TODO: Accessible? At-able?
+        elif hasattr(self.authority, "__getitem__"):
+            authority = self.authority
+            pointer = -1
+            while pointer + 1 < len(args):
+                pointer += 1
+                authority = authority[args[pointer]]
+            return authority
         raise NotImplementedError
 
     def _process_message(self, msg):

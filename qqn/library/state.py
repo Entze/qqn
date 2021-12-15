@@ -1,6 +1,6 @@
 from pyro.poutine.runtime import effectful
 
-from qqn.library.SetValueMessenger import SetValueMessenger
+from qqn.library.setvalue_messenger import SetValueMessenger
 from qqn.library.common import nothing, fst_default, gt_zero, func_composition, le_zero
 
 _state_embedding_eff = effectful(nothing, type='state_embedding')

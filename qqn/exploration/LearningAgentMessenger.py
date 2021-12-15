@@ -15,7 +15,7 @@ from torch.distributions.utils import logits_to_probs
 from qqn.library.action import action_prior_eff, all_actions_eff
 from qqn.library.common import const
 from qqn.library.number_bin import NumberBin
-from qqn.library.option import option_estimator_eff
+from qqn.library.action import action_estimate_eff
 from qqn.library.policy import policy_type, policy_posterior_type, policy_distribution_type
 from qqn.library.state import state_key_eff
 
@@ -145,7 +145,7 @@ class LearningAgentMessenger(Messenger):
 
     def _action_value_model(self, state, action_idx):
         with poutine.block(hide=["p_action_idx"]):
-            action_value = option_estimator_eff(state, action_idx, max_depth=self.max_estimation_depth)
+            action_value = action_estimate_eff(state, action_idx, max_depth=self.max_estimation_depth)
         action_value_binned = self.binner.transform_to(action_value)
         pyro.sample(f"av_action_value_bin", dist.Categorical(logits=torch.zeros(self.binner.nr_of_bins)),
                     obs=action_value_binned)

@@ -3,7 +3,7 @@ import random
 import torch
 from torch import tensor
 
-from qqn.library.SetValueMessenger import SetValueMessenger
+from qqn.library.setvalue_messenger import SetValueMessenger
 from qqn.library.action import nr_of_actions_type, action_islegal_type
 from qqn.library.simulate import simulate_by_sampling
 from qqn.library.state import StateValueFunctionMessenger

@@ -7,7 +7,7 @@ from torch import Tensor, tensor
 import pyro.distributions as dist
 
 from qqn.library.common import snd
-from qqn.library.option import option_selector_type
+from qqn.library.action import action_select_type
 
 
 class SoftmaxAgentMessenger(Messenger):
@@ -16,7 +16,7 @@ class SoftmaxAgentMessenger(Messenger):
         super().__init__()
 
     def _process_message(self, msg):
-        if msg['type'] == option_selector_type:
+        if msg['type'] == action_select_type:
             args = msg['args']
             estimations = args[1]
             value = msg['value']
