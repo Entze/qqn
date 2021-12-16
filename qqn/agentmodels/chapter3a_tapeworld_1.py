@@ -11,6 +11,7 @@ from qqn.library.simulate import simulate_by_sampling
 from qqn.library.softmaxagent_messenger import softmax_agent
 from qqn.library.state import StateValueFunctionMessenger
 from qqn.library.transition import TransitionFunctionMessenger
+from qqn.library.weighted_rate_messenger import WeightedRateMessenger
 
 
 def concrete_transition_function(state, action):
@@ -35,7 +36,15 @@ nr_of_actions = SetValueMessenger(nr_of_actions_type, 3)
 # with nr_of_actions, transition, state_value:
 #     print(simulate_by_sampling(tensor([3, 0])))
 #     print(policy_eff(tensor([3, 0])))
-#
+#     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+
+print("Argmax with weighting:")
+with nr_of_actions, transition, state_value, WeightedRateMessenger(alpha=10.):
+    print(simulate_by_sampling(tensor([3, 0])))
+    print(policy_eff(tensor([3, 0])))
+    print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+
+
 # print('#' * 80)
 # print("Softmax:")
 # with nr_of_actions, transition, state_value, softmax_agent():
@@ -43,25 +52,39 @@ nr_of_actions = SetValueMessenger(nr_of_actions_type, 3)
 #     print(policy_eff(tensor([3, 0])))
 #     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
 
-print('#' * 80)
-print("Softmax with sampling:")
-with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-        min_estimation_value=0,
-        max_estimation_value=2,
-        nr_of_bins=21,
-        optimization_steps=2):
-    print(simulate_by_sampling(tensor([3, 0])))
-    print(policy_eff(tensor([3, 0])))
-    print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
-
-print('#' * 80)
-print("Cached Softmax with sampling:")
-with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-        min_estimation_value=0,
-        max_estimation_value=2,
-        nr_of_bins=21,
-        optimization_steps=100), \
-        Cacher(types=[action_estimate_type]):
-    print(simulate_by_sampling(tensor([3, 0])))
-    print(policy_eff(tensor([3, 0])))
-    print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+# print('#' * 80)
+# print("Softmax with sampling:")
+# with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
+#         min_estimation_value=0,
+#         max_estimation_value=2,
+#         nr_of_bins=21,
+#         optimization_steps=2):
+#     print(simulate_by_sampling(tensor([3, 0])))
+#     print(policy_eff(tensor([3, 0])))
+#     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+#
+# print('#' * 80)
+# print("Cached Softmax with sampling:")
+# with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
+#         min_estimation_value=0,
+#         max_estimation_value=2,
+#         nr_of_bins=21,
+#         optimization_steps=100), \
+#         Cacher(types=[action_estimate_type]):
+#     print(simulate_by_sampling(tensor([3, 0])))
+#     print(policy_eff(tensor([3, 0])))
+#     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))
+#
+#
+# print('#' * 80)
+# print("Cached and weighted Softmax with sampling:")
+# with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
+#         min_estimation_value=0,
+#         max_estimation_value=2,
+#         nr_of_bins=21,
+#         optimization_steps=20), \
+#         WeightedRateMessenger(alpha=1.), \
+#         Cacher(types=[action_estimate_type]):
+#     print(simulate_by_sampling(tensor([3, 0])))
+#     print(policy_eff(tensor([3, 0])))
+#     print(logits_to_probs(policy_posterior_eff(tensor([3, 0])).float()))

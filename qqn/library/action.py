@@ -98,8 +98,8 @@ def action_estimate_default(action, state, depth=0, max_depth=None, *args, **kwa
         return primary + action_heuristic_eff(next_state)
     actions = action_generate_eff(next_state, *args, **kwargs)
     estimations = action_map_estimate_eff(actions, next_state, depth + 1, max_depth, *args, **kwargs)
-    ratings = action_rate_eff(estimations, next_state, *args, **kwargs)
-    secondary = action_collapse_eff(ratings, next_state, *args, **kwargs)
+    # ratings = action_rate_eff(estimations, next_state, *args, **kwargs)
+    secondary = action_collapse_eff(estimations, next_state, *args, **kwargs)
     return (primary + secondary).float()
 
 
