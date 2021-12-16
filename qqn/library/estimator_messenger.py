@@ -6,7 +6,7 @@ from pyro import poutine
 from torch import tensor
 from torch.distributions.utils import logits_to_probs
 
-from qqn.library.action import action_estimate_type, action_estimate_default
+from qqn.library.action import action_estimate_type, action_estimate_default, action_islegal_eff
 from qqn.library.number_bin import NumberBin
 from qqn.library.setvalue_messenger import SetValueMessenger
 from qqn.library.state import state_key_eff
@@ -25,7 +25,9 @@ class EstimatorMessenger(SetValueMessenger):
         self.__action_value_prior_logits = torch.zeros(self.binner.nr_of_bins)
         self.__action_value_prior = dist.Categorical(logits=self.__action_value_prior_logits)
 
-    def _access(self, action_idx, state, depth=0, max_depth=None):
+    def _access(self, action_idx, state, *args, **kwargs):
+        if not action_islegal_eff(action_idx, state, *args, **kwargs):
+            return torch.full_like(action_idx, float('-inf'), dtype=torch.float)
         return self._estimate(action_idx, state)
 
     def _estimate(self, action_idx, state):

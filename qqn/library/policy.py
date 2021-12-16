@@ -2,8 +2,8 @@ import pyro.distributions as dist
 import torch
 from torch import Tensor
 
-from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff
-from qqn.library.action import nr_of_actions_eff
+from qqn.library.action import action_generate_eff, action_rate_eff, action_select_eff, action_map_estimate_eff, \
+    action_rate_type
 from qqn.library.common import snd, fst
 from qqn.library.effect import effectful
 
@@ -37,7 +37,9 @@ def policy_posterior_default(state, *args, **kwargs):
     elif isinstance(ratings, dist.Categorical):
         return ratings.logits
 
-    return torch.zeros(nr_of_actions_eff())
+    raise NotImplementedError(
+        f"Cannot select from ratings of type {type(ratings).__name__}, you have to use a messenger that processes "
+        f"{str(policy_posterior_type)}, or use a messenger for {str(action_rate_type)} that produces a supported type")
 
 
 policy_posterior_type = 'policy_posterior'

@@ -54,7 +54,7 @@ def action_prior_default(state, *args, **kwargs):
     actions = all_actions_eff(*args, **kwargs)
 
     for a in actions:
-        if not action_islegal_eff(state, a):
+        if not action_islegal_eff(a, state):
             logits[a] = float('-inf')
     return logits
 
@@ -89,8 +89,8 @@ def action_generate_eff(*args, **kwargs):
 ########################################################################################################################
 
 def action_estimate_default(action, state, depth=0, max_depth=None, *args, **kwargs):
-    if not action_islegal_eff(state, action):
-        return tensor(float('-inf'))
+    if not action_islegal_eff(action, state):
+        return torch.full_like(action, float('-inf'), dtype=torch.float)
     next_state = transition_eff(state, action)
     primary = state_value_eff(next_state)
     if state_isfinal_eff(next_state):
@@ -132,7 +132,13 @@ def action_heuristic_eff(*args, **kwargs):
 
 
 def action_map_estimate_default(actions, state, *args, **kwargs):
-    return torch.stack([action_estimate_eff(action, state, *args, **kwargs) for action in actions])
+    estimations = []
+    for action in actions:
+        if action_islegal_eff(action, state, *args, **kwargs):
+            estimations.append(action_estimate_eff(action, state, *args, **kwargs))
+        else:
+            estimations.append(torch.full_like(action, float('-inf'), dtype=torch.float))
+    return torch.stack(estimations)
 
 
 action_map_estimate_type = 'action_map_estimate'
@@ -180,7 +186,7 @@ def action_select_default(ratings, *args, **kwargs):
     elif isinstance(ratings, Tensor):
         return dist.Categorical(logits=ratings).sample()
     raise NotImplementedError(
-        f"Cannot select from ratings of type {type(ratings).__name__}, you have to write a messenger that processes {str(action_select_type)}")
+        f"Cannot select from ratings of type {type(ratings).__name__}, you have to use a messenger that processes {str(action_select_type)}")
 
 
 action_select_type = 'action_select'
@@ -198,7 +204,6 @@ def action_select_eff(ratings, *args, **kwargs):
 
 
 def action_collapse_default(ratings, *args, **kwargs):
-
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
         if isinstance(ratings[0][1], Number):
             assert isinstance(ratings, list)
@@ -213,7 +218,7 @@ def action_collapse_default(ratings, *args, **kwargs):
         return torch.mean(ratings)
 
     raise NotImplementedError(
-        f"Cannot select from ratings of type {type(ratings).__name__}, you have to write a messenger that processes {str(action_collapse_type)}")
+        f"Cannot select from ratings of type {type(ratings).__name__}, you have to use a messenger that processes {str(action_collapse_type)}")
 
 
 action_collapse_type = 'action_collapse'
