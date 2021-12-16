@@ -1,5 +1,4 @@
 import math
-import random
 import statistics
 from numbers import Number
 from typing import Iterator
@@ -177,10 +176,7 @@ def action_rate_eff(estimations, *args, **kwargs):
 
 def action_select_default(ratings, *args, **kwargs):
     if isinstance(ratings, list) and len(ratings) > 0 and isinstance(ratings[0], tuple):
-        option, logit = random.choice(ratings)
-        while math.isinf(logit):
-            option, logit = random.choice(ratings)
-        return tensor(option)
+        return ratings[0][0]
     elif isinstance(ratings, Distribution):
         return ratings.sample()
     elif isinstance(ratings, Tensor):
