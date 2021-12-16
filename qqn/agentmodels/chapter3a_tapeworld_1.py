@@ -60,7 +60,7 @@ with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimating
         min_estimation_value=0,
         max_estimation_value=2,
         nr_of_bins=21,
-        optimization_steps=1_000), \
+        optimization_steps=100), \
         Cacher(types=[action_estimate_type]):
     print(simulate_by_sampling(tensor([3, 0])))
     print(policy_eff(tensor([3, 0])))

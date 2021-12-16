@@ -86,11 +86,12 @@ def allowed_actions(gw_t, state_t):
     # actions[0] = actions[0] and gw_t[y - 1, x] != 1
 
 
-
-
 std_embedding = {
     'DN': 10,
     'DS': 11,
     'V': 12,
     'N': 13,
+    'W': 20,
+    'E': 21,
+    'H': 22,
 }

@@ -25,7 +25,7 @@ class EstimatorMessenger(SetValueMessenger):
         self.__action_value_prior_logits = torch.zeros(self.binner.nr_of_bins)
         self.__action_value_prior = dist.Categorical(logits=self.__action_value_prior_logits)
 
-    def _access(self, action_idx, state, *args, **kwargs):
+    def _access(self, action_idx, state, depth=0, max_depth=None, *args, **kwargs):
         if not action_islegal_eff(action_idx, state, *args, **kwargs):
             return torch.full_like(action_idx, float('-inf'), dtype=torch.float)
         return self._estimate(action_idx, state)

@@ -89,15 +89,15 @@ def action_generate_eff(*args, **kwargs):
 ########################################################################################################################
 
 def action_estimate_default(action, state, depth=0, max_depth=None, *args, **kwargs):
-    if not action_islegal_eff(action, state):
+    if not action_islegal_eff(action, state, *args, **kwargs):
         return torch.full_like(action, float('-inf'), dtype=torch.float)
     next_state = transition_eff(state, action)
-    primary = state_value_eff(next_state)
-    if state_isfinal_eff(next_state):
+    primary = state_value_eff(next_state, *args, **kwargs)
+    if state_isfinal_eff(next_state, *args, **kwargs):
         return primary.float()
     if max_depth is not None and depth >= max_depth:
         return primary + action_heuristic_eff(next_state)
-    actions = action_generate_eff(next_state)
+    actions = action_generate_eff(next_state, *args, **kwargs)
     estimations = action_map_estimate_eff(actions, next_state, depth + 1, max_depth, *args, **kwargs)
     ratings = action_rate_eff(estimations, next_state, *args, **kwargs)
     secondary = action_collapse_eff(ratings, next_state, *args, **kwargs)
@@ -131,11 +131,11 @@ def action_heuristic_eff(*args, **kwargs):
 ########################################################################################################################
 
 
-def action_map_estimate_default(actions, state, *args, **kwargs):
+def action_map_estimate_default(actions, state, depth=0, max_depth=None, *args, **kwargs):
     estimations = []
     for action in actions:
         if action_islegal_eff(action, state, *args, **kwargs):
-            estimations.append(action_estimate_eff(action, state, *args, **kwargs))
+            estimations.append(action_estimate_eff(action, state, depth, max_depth, *args, **kwargs))
         else:
             estimations.append(torch.full_like(action, float('-inf'), dtype=torch.float))
     return torch.stack(estimations)
