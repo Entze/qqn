@@ -16,6 +16,7 @@ class _BoundPartial(partial):
     Converts a (possibly) bound method into a partial function to
     support class methods as arguments to handlers.
     """
+
     def __get__(self, instance, owner):
         if instance is None:
             return self

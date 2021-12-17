@@ -57,106 +57,20 @@ def test(initial_state,
                                                   ('Sampling', sampling_estimating_agent_gen(
                                                       min_estimation_value=min_estimation_value,
                                                       max_estimation_value=max_estimation_value,
+                                                      nr_of_bins=100,
                                                       optimization_steps=50
                                                   )),
                                                   ('VI', svi_estimating_agent_gen(
                                                       min_estimation_value=min_estimation_value,
                                                       max_estimation_value=max_estimation_value,
-                                                      optimization_steps=25,
-                                                      optim_args=dict(lr=0.125)
+                                                      optimization_steps=10,
+                                                      optim_args=dict(lr=0.25)
                                                   ))):
                         print('#' * 80)
                         print(f"{agent_name} {weighted_name} {collapse_name} {inference_name}:")
                         with agent(), weighted(), collapse(), infer(), Cacher(types=[action_estimate_type]):
                             test_context(initial_state, traces, progressbar)
 
-        # print('#' * 80)
-        # print("Argmax:")
-        # with Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Argmax:")
-        # with WeightedRateMessenger(
-        #         alpha=alpha), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Argmax with max collapse:")
-        # with MaxCollapseMessenger(), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Argmax with sampling:")
-        # with SamplingEstimatingAgentMessenger(
-        #         min_estimation_value=min_estimation_value,
-        #         max_estimation_value=max_estimation_value,
-        #         optimization_steps=50,
-        # ), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Argmax with VI:")
-        # with SVIEstimatingAgentMessenger(
-        #         min_estimation_value=min_estimation_value,
-        #         max_estimation_value=max_estimation_value,
-        #         optimization_steps=25,
-        #         optim_args=dict(lr=0.5)
-        # ), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Argmax with max collapse:")
-        # with MaxCollapseMessenger(), WeightedRateMessenger(alpha=alpha), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Softmax:")
-        # with WeightedRateMessenger(alpha=alpha), softmax_agent(), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Softmax with max collapse:")
-        # with WeightedRateMessenger(alpha=alpha), softmax_agent(), MaxCollapseMessenger(), Cacher(
-        #         types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Softmax with estimation sampling:")
-        # with softmax_agent(), SamplingEstimatingAgentMessenger(
-        #         min_estimation_value=min_estimation_value,
-        #         max_estimation_value=max_estimation_value,
-        #         nr_of_bins=(max_estimation_value - min_estimation_value) * 10 + 1,
-        #         optimization_steps=50), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Softmax with estimation sampling:")
-        # with WeightedRateMessenger(alpha=alpha), softmax_agent(), SamplingEstimatingAgentMessenger(
-        #         min_estimation_value=min_estimation_value,
-        #         max_estimation_value=max_estimation_value,
-        #         nr_of_bins=(max_estimation_value - min_estimation_value) * 10 + 1,
-        #         optimization_steps=50), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Softmax with estimation sampling and max collapse:")
-        # with MaxCollapseMessenger(), softmax_agent(), SamplingEstimatingAgentMessenger(
-        #         min_estimation_value=min_estimation_value,
-        #         max_estimation_value=max_estimation_value,
-        #         nr_of_bins=(max_estimation_value - min_estimation_value) * 10 + 1,
-        #         optimization_steps=50), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
-        #
-        # print('#' * 80)
-        # print("Weighted Softmax with estimation sampling and max collapse:")
-        # with MaxCollapseMessenger(), WeightedRateMessenger(
-        #         alpha=alpha), softmax_agent(), SamplingEstimatingAgentMessenger(
-        #     min_estimation_value=min_estimation_value,
-        #     max_estimation_value=max_estimation_value,
-        #     nr_of_bins=(max_estimation_value - min_estimation_value) * 10 + 1,
-        #     optimization_steps=50), Cacher(types=[action_estimate_type]):
-        #     test_context(initial_state, traces, progressbar)
     print('#' * 80)
     print('#' * 80)
     print('#' * 80)

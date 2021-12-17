@@ -28,8 +28,8 @@ def concrete_transition_function(state, action):
 
 donut_s = tensor(1.)
 donut_n = tensor(1.)
-veg = tensor(3.)
-noodle = tensor(2.)
+veg = tensor(2.)
+noodle = tensor(1.)
 
 ___ = ' '
 DN = 'DN'
@@ -54,7 +54,7 @@ grid_t = gw.as_tensor(grid)
 def concrete_state_value_function(state):
     timeleft, x, y = state[0], state[1], state[2]
     timeused = initial_state[0] - timeleft
-    cost = timeused * 0.1
+    cost = timeused * 0.008
     if x == 0 and y == 7:
         return donut_s - cost
     elif x == 2 and y == 2:
@@ -81,11 +81,11 @@ action_islegal = SetValueMessenger(action_islegal_type, concrete_action_islegal_
 state_isfinal = SetValueMessenger(state_isfinal_type, concrete_state_isfinal_function)
 nr_of_actions = SetValueMessenger(nr_of_actions_type, 4)
 
-initial_state = tensor([9, 3, 6])
-alpha = 30.
+initial_state = tensor([11, 3, 6])
+alpha = 2.
 traces = 100
 
-test(initial_state=initial_state,
+test(initial_state=torch.clone(initial_state),
      nr_of_actions=nr_of_actions,
      transition=transition,
      state_value=state_value,

@@ -12,7 +12,7 @@ class NumberBin:
         self.width = ceil(self.upper - self.lower)
         self.nr_of_bins = nr_of_bins
         if self.nr_of_bins is None:
-            self.nr_of_bins = min(3, max(1000, self.width * 2))
+            self.nr_of_bins = max(3, min(1000, self.width * 2))
         if not isinstance(self.nr_of_bins, int):
             self.nr_of_bins = int(self.nr_of_bins)
         assert isinstance(self.nr_of_bins, int)
