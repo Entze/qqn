@@ -1,9 +1,8 @@
 from pyro.poutine.runtime import effectful
 
 from qqn.library.action import action_generate_eff, action_estimate_eff, action_islegal_eff
-from qqn.library.common import nothing
 from qqn.library.policy import policy_eff
-from qqn.library.state import state_isfinal_eff
+from qqn.library.state import state_isfinal_eff, update_belief_eff
 from qqn.library.transition import transition_eff
 
 
@@ -14,6 +13,7 @@ def simulate_by_sampling(initial_state, *args, **kwargs):
         action = policy_eff(curr_state)
         assert action_islegal_eff(action, curr_state)
         curr_state = transition_eff(curr_state, action)
+        curr_state = update_belief_eff(curr_state)
         trace.append((curr_state, action))
     trace.append((curr_state, None))
     return trace

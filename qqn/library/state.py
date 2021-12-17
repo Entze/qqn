@@ -38,7 +38,7 @@ def state_resource_eff(state, *args, **kwargs):
     return _state_resource_eff(*req_args, *args, **kwargs)
 
 
-def resource_depleted_default(resource, *args, **kwargs):
+def resource_depleted_default(resource):
     return resource <= 0
 
 
@@ -67,6 +67,19 @@ _state_value_eff = effectful(nothing, type=state_value_type)
 def state_value_eff(state, *args, **kwargs):
     req_args = (state,)
     return _state_value_eff(*req_args, *args, **kwargs)
+
+
+def update_belief_default(state):
+    return state
+
+
+update_belief_type = 'update_belief'
+_update_belief_eff = effectful(update_belief_default, type=update_belief_type)
+
+
+def update_belief_eff(state, *args, **kwargs):
+    req_args = (state,)
+    return _update_belief_eff(*req_args, *args, **kwargs)
 
 
 class BaseStateValueMessenger(SetValueMessenger):

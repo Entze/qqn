@@ -29,3 +29,6 @@ class MaxCollapseMessenger(SetValueMessenger):
         raise NotImplementedError(
             f"Cannot select from ratings of type {type(estimations).__name__}, "
             f"you have to use a messenger that processes {str(action_collapse_type)}")
+
+def max_collapse_agent():
+    return MaxCollapseMessenger()

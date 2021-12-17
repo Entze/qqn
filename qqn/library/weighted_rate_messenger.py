@@ -48,3 +48,14 @@ class WeightedRateMessenger(SetValueMessenger):
         if callable(self.gamma):
             return self.gamma(*args, **kwargs)
         return self.gamma
+
+
+def weighted_rate_agent(alpha=1.0, gamma=0.0):
+    return WeightedRateMessenger(alpha, gamma)
+
+
+def weighted_rate_agent_gen(alpha=1.0, gamma=0.0):
+    def gen():
+        return weighted_rate_agent(alpha, gamma)
+
+    return gen

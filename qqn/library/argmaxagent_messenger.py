@@ -1,7 +1,5 @@
 from numbers import Number
 
-import pyro
-import pyro.distributions as dist
 import torch
 from torch import Tensor
 
@@ -10,7 +8,7 @@ from qqn.library.common import snd, fst
 from qqn.library.setvalue_messenger import SetValueMessenger
 
 
-class SoftmaxAgentMessenger(SetValueMessenger):
+class ArgmaxAgentMessenger(SetValueMessenger):
 
     def __init__(self):
         super().__init__(action_select_type, None)
@@ -29,11 +27,11 @@ class SoftmaxAgentMessenger(SetValueMessenger):
                     ratings = torch.stack(estimations_l)
 
         if isinstance(ratings, Tensor):
-            return pyro.sample("action_selection", dist.Categorical(logits=ratings))
+            return torch.argmax(ratings)
 
         raise NotImplementedError(
             f"Cannot select from ratings of type {type(ratings).__name__}, you have to use a messenger that processes {str(action_select_type)}")
 
 
-def softmax_agent():
-    return SoftmaxAgentMessenger()
+def argmax_agent():
+    return ArgmaxAgentMessenger()
