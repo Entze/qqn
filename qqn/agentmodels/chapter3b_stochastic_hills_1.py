@@ -1,25 +1,27 @@
-from collections import defaultdict
-
 import torch
 from torch import tensor
-from torch.distributions.utils import logits_to_probs
-from tqdm import trange
 
 import qqn.initial_exploration.gridworld as gw
-from qqn.library.action import nr_of_actions_type, action_islegal_type, action_estimate_type
-from qqn.library.cacher import Cacher
-from qqn.library.policy import policy_eff, policy_posterior_eff
+from qqn.agentmodels.testsuite import test
+from qqn.library.action import nr_of_actions_type, action_islegal_type, nr_of_actions_eff
 from qqn.library.setvalue_messenger import SetValueMessenger
-from qqn.library.simulate import simulate_by_sampling
-from qqn.library.softmaxagent_messenger import softmax_agent
 from qqn.library.state import StateValueFunctionMessenger, state_isfinal_type
 from qqn.library.transition import TransitionFunctionMessenger
-from qqn.library.weighted_rate_messenger import WeightedRateMessenger
 
 
 def concrete_transition_function(state, action):
     assert concrete_action_islegal_function(action, state)
     new_state = torch.clone(state)
+    noise = torch.distributions.Bernoulli(0.1)
+    missstep = bool(noise.sample())
+    if missstep:
+        slip_direction = 2 * torch.distributions.Bernoulli(0.5).sample() - 1
+        if concrete_action_islegal_function(
+                torch.remainder(torch.round(action + slip_direction).int(), nr_of_actions_eff()), state):
+            action = torch.remainder(torch.round(action + slip_direction).int(), nr_of_actions_eff())
+        elif concrete_action_islegal_function(
+                torch.remainder(torch.round(action - slip_direction).int(), nr_of_actions_eff()), state):
+            action = torch.remainder(torch.round(action - slip_direction).int(), nr_of_actions_eff())
     t = [0, 0]
     if action == 0:
         t = [0, -1]
@@ -91,45 +93,17 @@ state_isfinal = SetValueMessenger(state_isfinal_type, concrete_state_isfinal_fun
 nr_of_actions = SetValueMessenger(nr_of_actions_type, 4)
 
 initial_state = tensor([12, 0, 3])
+traces = 10
+alpha = 10.
 
-print("Argmax:")
-with nr_of_actions, transition, state_value, state_isfinal, action_islegal, Cacher(types=[action_estimate_type]):
-    print(simulate_by_sampling(initial_state))
-    print(policy_eff(initial_state))
-
-print('#' * 80)
-print("Weighted Softmax:")
-with nr_of_actions, action_islegal, transition, state_value, state_isfinal, softmax_agent(), WeightedRateMessenger(
-        alpha=1000.), \
-        Cacher(
-            types=[action_estimate_type]):
-    trajectory_length = defaultdict(int)
-    for _ in trange(1000):
-        trace = simulate_by_sampling(initial_state)
-        trajectory_length[len(trace) - 2] += 1
-    print(trajectory_length)
-    print(policy_eff(initial_state))
-    print(logits_to_probs(policy_posterior_eff(initial_state).float()))
-
-# print('#' * 80)
-# print("Softmax with sampling:")
-# with  nr_of_actions, action_islegal, state_value, state_isfinal, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-#         min_estimation_value=0,
-#         max_estimation_value=2,
-#         nr_of_bins=21,
-#         optimization_steps=2):
-#     print(simulate_by_sampling(initial_state))
-#     print(policy_eff(initial_state))
-#     print(logits_to_probs(policy_posterior_eff(initial_state).float()))
-
-# print('#' * 80)
-# print("Cached Softmax with sampling:")
-# with action_islegal, nr_of_actions, state_value, state_isfinal, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-#         min_estimation_value=0,
-#         max_estimation_value=2,
-#         nr_of_bins=21,
-#         optimization_steps=100), \
-#         Cacher(types=[action_estimate_type]):
-#     print(simulate_by_sampling(initial_state))
-#     print(policy_eff(initial_state))
-#     print(logits_to_probs(policy_posterior_eff(initial_state).float()))
+test(initial_state=initial_state,
+     nr_of_actions=nr_of_actions,
+     transition=transition,
+     state_value=state_value,
+     action_islegal=action_islegal,
+     state_isfinal=state_isfinal,
+     min_estimation_value=-11.2,
+     max_estimation_value=10,
+     alpha=alpha,
+     traces=traces,
+     progressbar=True)
