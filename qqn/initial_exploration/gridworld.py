@@ -86,6 +86,18 @@ def allowed_actions(gw_t, state_t):
     # actions[0] = actions[0] and gw_t[y - 1, x] != 1
 
 
+def is_adjacent_location(state_t, loc):
+    loc_x, loc_y = loc[0], loc[1]
+    x, y = state_t[1], state_t[2]
+    if y == loc_y:
+        if any(x + n == loc_x for n in (-1, 1)):
+            return True
+    elif x == loc_x:
+        if any(y + n == loc_y for n in (-1, 1)):
+            return True
+    return False
+
+
 std_embedding = {
     'DN': 10,
     'DS': 11,

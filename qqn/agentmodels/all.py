@@ -1,0 +1,8 @@
+
+import chapter3_oneshotrestaurant_1
+import chapter3_oneshotrestaurant_1
+import chapter3a_tapeworld_1
+import chapter3b_deterministic_hills_1
+import chapter3b_stochastic_hills_1
+import chapter3c_bandits
+import chapter3c_stochastic_gridworld_1
