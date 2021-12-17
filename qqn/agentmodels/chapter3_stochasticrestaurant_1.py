@@ -2,15 +2,11 @@ import pyro
 import pyro.distributions as dist
 import torch
 from torch import tensor
-from torch.distributions.utils import logits_to_probs
 
+from qqn.agentmodels.testsuite import test
 from qqn.library.action import nr_of_actions_type
-from qqn.library.estimator_messenger import SamplingEstimatingAgentMessenger
-from qqn.library.policy import policy_eff, policy_posterior_eff
 from qqn.library.setvalue_messenger import SetValueMessenger
-from qqn.library.simulate import simulate_by_sampling
-from qqn.library.softmaxagent_messenger import softmax_agent
-from qqn.library.state import StateValueFunctionMessenger
+from qqn.library.state import StateValueFunctionMessenger, state_isfinal_type
 from qqn.library.transition import TransitionFunctionMessenger
 
 
@@ -35,21 +31,22 @@ def concrete_state_value_function(state):
     return tensor(0.)
 
 
+oneshot = SetValueMessenger(state_isfinal_type, lambda s: s != 'initial_state')
 transition = TransitionFunctionMessenger(concrete_transition_function)
 state_value = StateValueFunctionMessenger(concrete_state_value_function)
 nr_of_actions = SetValueMessenger(nr_of_actions_type, 2)
 
-with nr_of_actions, transition, state_value:
-    print(simulate_by_sampling(tensor([1, 0])))
-    print(policy_eff(tensor([1, 0])))
+initial_state = 'initial_state'
+alpha = 1.1
+traces = 100
 
-with nr_of_actions, transition, state_value, softmax_agent():
-    print(simulate_by_sampling(tensor([1, 0])))
-    print(policy_eff(tensor([1, 0])))
-    print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
-
-with nr_of_actions, state_value, transition, softmax_agent(), SamplingEstimatingAgentMessenger(
-        min_estimation_value=-10, max_estimation_value=8, nr_of_bins=60, optimization_steps=100):
-    print(simulate_by_sampling(tensor([1, 0])))
-    print(policy_eff(tensor([1, 0])))
-    print(logits_to_probs(policy_posterior_eff(tensor([1, 0])).float()))
+test(initial_state=initial_state,
+     nr_of_actions=nr_of_actions,
+     transition=transition,
+     state_value=state_value,
+     state_isfinal=oneshot,
+     min_estimation_value=-10,
+     max_estimation_value=8,
+     alpha=alpha,
+     traces=traces,
+     progressbar=False)

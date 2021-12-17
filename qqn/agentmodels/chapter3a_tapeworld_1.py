@@ -35,6 +35,6 @@ test(initial_state=initial_state,
      transition=transition,
      state_value=state_value,
      min_estimation_value=0,
-     max_estimation_value=2,
+     max_estimation_value=1,
      traces=traces,
      progressbar=False)
